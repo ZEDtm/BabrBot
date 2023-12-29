@@ -275,10 +275,12 @@ async def resident_info(callback: types.CallbackQuery, state: FSMContext):
     user = find_user(user_id)
     name = user['full_name'].split()
     telegram_user_name = user['telegram_user_name']
-    text = f"Информация о {name[0]} {name[1][0]}.{name[2][0]}.:\n" \
-           f"{f' Тег: @{telegram_user_name}' if telegram_user_name else ''}\n" \
-           f" Компания: {user['company_name']}\n" \
-           f" Сайт компании: <a href='{user['company_site']}'>*клик*</a>"
+    text = f"Информация о {name[0]} {name[1][0]}.{name[2][0]}.:\n"
+    if telegram_user_name:
+        text += f" Тег: @{telegram_user_name}\n"
+    text += f" Номер телефона: +{user['phone_number']}\n" \
+            f" Компания: {user['company_name']}\n" \
+            f" Сайт компании: <a href='{user['company_site']}'>*клик*</a>"
 
     await callback.message.edit_text(text, parse_mode='HTML', reply_markup=back)
 

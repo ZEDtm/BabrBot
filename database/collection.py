@@ -1,27 +1,19 @@
 from pymongo.mongo_client import MongoClient
 from config import MONGO_LOGIN, MONGO_PASS
-from dataclasses import dataclass, asdict
 
 uri = f"mongodb+srv://{MONGO_LOGIN}:{MONGO_PASS}@atlascluster.u3h56sm.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(uri)
 
 db = client.BabrBot
 users = db.users
+events = db.events
+
+#event = Event('2023', '12', '29', 'HMM', ['5475217426'])
+#events.insert_one(event())
 
 
-@dataclass
-class User:
-    user_id: int
-    telegram_first_name: str
-    telegram_last_name: str
-    telegram_user_name: str
-    full_name: str
-    phone_number: str
-    company_name: str
-    company_site: str
-
-    def __call__(self):
-        return asdict(self)
+def find_event(date):
+    return events.find_one({'year': str(date['year']), 'month': str(date['month']), 'day': str(date['day'])})
 
 
 def find_user(user_id: str):

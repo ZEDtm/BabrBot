@@ -94,7 +94,7 @@ async def edit_company_site(message: types.Message, state: FSMContext):
 #   КАЛЕНДАРЬ
 @dp.callback_query_handler(lambda callback: 'calendar_handler' in callback.data, state=Menu.main)
 async def calendar_handler(callback: types.CallbackQuery, state: FSMContext):
-    await calendar_handlers.calendar_handler(callback, state)
+    await calendar_handlers.events_calendar_handler(callback, state)
 
 
 @dp.callback_query_handler(lambda callback: re.match(r'^event_calendar:(.*)', callback.data), state=Menu.calendar)

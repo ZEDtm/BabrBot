@@ -12,7 +12,7 @@ from modules.calendar_module import EventCalendar
 logging.basicConfig(level=logging.INFO)
 
 
-async def calendar_handler(callback: types.CallbackQuery, state: FSMContext):
+async def events_calendar_handler(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(Menu.calendar)
     events_data = events.find()
     user_id = callback.message.chat.id

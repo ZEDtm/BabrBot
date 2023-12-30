@@ -1,17 +1,11 @@
 import logging
-import re
 
-from config import bot, dp
-from database.collection import users, find_user, update_full_name, update_company_name, update_company_site, events, find_event
-from database.models import User
-from modules.bot_states import Registration, Menu, ProfileEdit
+from database.collection import find_user
+from modules.bot_states import Menu
 
-from aiogram import executor, types
+from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-from modules.calendar_module import EventCalendar
-from handlers import registration_handlers, profile_handlers, calendar_handlers, residents_handlers
 
 logging.basicConfig(level=logging.INFO)
 

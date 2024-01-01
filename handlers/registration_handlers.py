@@ -80,7 +80,8 @@ async def end_registration(message: types.Message, state: FSMContext):
                 phone_number,
                 company_name,
                 company_site,
-                [])
+                [],
+                False)
     users.insert_one(user())
 
     edit = InlineKeyboardMarkup()

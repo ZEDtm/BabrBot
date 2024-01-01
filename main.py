@@ -1,13 +1,15 @@
 import logging
 import re
 
+import admin_handlers.new_event_handlers
 from config import dp
-from modules.bot_states import Registration, Menu, ProfileEdit
+from modules.bot_states import Registration, Menu, ProfileEdit, AdminNewEvent
 
 from aiogram import executor, types
 from aiogram.dispatcher import FSMContext
 
 from handlers import main_handlers, registration_handlers, profile_handlers, calendar_handlers, residents_handlers
+from admin_handlers import new_event_handlers
 
 logging.basicConfig(level=logging.INFO)
 
@@ -117,6 +119,78 @@ async def resident_info(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(lambda callback: 'menu' in callback.data, state='*')
 async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
     await main_handlers.menu_handler(callback, state)
+
+
+# АДМИН
+@dp.callback_query_handler(lambda callback: 'new_event' in callback.data, state=Menu.main)
+async def new_event(callback: types.CallbackQuery, state: FSMContext):
+    await new_event_handlers.new_event_handler(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'new_event_long' in callback.data or
+                                            'new_event_short' in callback.data, state=AdminNewEvent.event_long)
+async def new_event_duration(callback: types.CallbackQuery, state: FSMContext):
+    await new_event_handlers.new_event_duration(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'start_days' in callback.data, state=AdminNewEvent.event_duration)
+async def new_event_name(callback: types.CallbackQuery, state: FSMContext):
+    await new_event_handlers.new_event_name(callback, state)
+
+
+@dp.message_handler(state=AdminNewEvent.event_name)
+async def new_event_description(message: types.Message, state: FSMContext):
+    await admin_handlers.new_event_handlers.new_event_description(message, state)
+
+
+@dp.message_handler(state=AdminNewEvent.event_description)
+async def new_event_price(message: types.Message, state: FSMContext):
+    await admin_handlers.new_event_handlers.new_event_price(message, state)
+
+
+@dp.message_handler(state=AdminNewEvent.event_services)
+async def new_event_services(message: types.Message, state: FSMContext):
+    await admin_handlers.new_event_handlers.new_event_services(message, state)
+
+
+@dp.callback_query_handler(lambda callback: 'add_event_service' in callback.data, state=AdminNewEvent.event_services)
+async def new_event_add_service(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.new_event_handlers.new_event_add_service(callback, state)
+
+
+@dp.message_handler(state=AdminNewEvent.event_services_new)
+async def new_event_add_service_price(message: types.Message, state: FSMContext):
+    await admin_handlers.new_event_handlers.new_event_add_service_price(message, state)
+
+
+@dp.message_handler(state=AdminNewEvent.event_add)
+async def new_event_add_service_price(message: types.Message, state: FSMContext):
+    await admin_handlers.new_event_handlers.new_event_add(message, state)
+
+
+@dp.callback_query_handler(lambda callback: 'add_event_set_calendar' in callback.data, state=AdminNewEvent.event_services)
+async def add_event_set_calendar(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.new_event_handlers.add_event_set_calendar(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: re.match(r'^new_event_calendar:(.*)', callback.data), state=AdminNewEvent.event_services)
+async def add_event_set_calendar(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.new_event_handlers.add_event_set_calendar_process(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'select_time' in callback.data, state=AdminNewEvent.event_services)
+async def add_event_set_time(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.new_event_handlers.add_event_set_time(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'list_event' in callback.data, state=Menu.main)
+async def list_events(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.list_events(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'events_list' in callback.data, state=Menu.main)
+async def list_events_select(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.list_events_select(callback, state)
 
 
 @dp.message_handler(state='*')

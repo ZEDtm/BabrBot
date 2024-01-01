@@ -12,6 +12,7 @@ class User:
     company_name: str
     company_site: str
     events: list
+    admin: bool
 
     def __call__(self):
         return asdict(self)
@@ -19,10 +20,18 @@ class User:
 
 @dataclass
 class Event:
-    year: str
-    month: str
-    day: str
+    id: int
     name: str
+    description: str
+    price: int
+    service_description: list
+    service_price: list
+    duration: int
+    year: int
+    month: int
+    day: int
+    hour: int
+    minute: int
     users: list
 
     def __call__(self):

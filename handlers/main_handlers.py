@@ -12,18 +12,19 @@ logging.basicConfig(level=logging.INFO)
 
 async def start(message: types.Message):
     keyboard = InlineKeyboardMarkup(row_width=2)
-    no = InlineKeyboardButton(text='Нет', callback_data='cancel_reg')
-    yes = InlineKeyboardButton(text='Да', callback_data='start_reg')
-    keyboard.add(no, yes)
+    keyboard.add(InlineKeyboardButton(text='❌ Нет', callback_data='cancel_reg'),
+                 InlineKeyboardButton(text='✅ Да', callback_data='start_reg'))
 
     menu = InlineKeyboardMarkup(row_width=1)
-    profile = InlineKeyboardButton(text="Профиль", callback_data='profile')
-    calendar = InlineKeyboardButton(text="Календарь", callback_data='calendar_handler')
-    residents = InlineKeyboardButton(text="Резиденты", callback_data='residents')
-    menu.add(profile, calendar, residents)
+    menu.add(InlineKeyboardButton(text="🌟 Профиль", callback_data='profile'),
+             InlineKeyboardButton(text="📅 Календарь", callback_data='calendar_handler'),
+             InlineKeyboardButton(text="🏘️ Резиденты", callback_data='residents'))
 
     user = find_user(message.from_user.id)
     if user:
+        if user['admin']:
+            menu.add(InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'),
+                     InlineKeyboardButton(text="Список мероприятий", callback_data='list_event'))
         await Menu.main.set()
         await message.answer(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
     else:
@@ -34,10 +35,15 @@ async def start(message: types.Message):
 
 async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
     menu = InlineKeyboardMarkup(row_width=1)
-    profile = InlineKeyboardButton(text="Профиль", callback_data='profile')
-    calendar = InlineKeyboardButton(text="Календарь", callback_data='calendar_handler')
-    residents = InlineKeyboardButton(text="Резиденты", callback_data='residents')
-    menu.add(profile, calendar, residents)
+    menu.add(InlineKeyboardButton(text="🌟 Профиль", callback_data='profile'),
+             InlineKeyboardButton(text="📅 Календарь", callback_data='calendar_handler'),
+             InlineKeyboardButton(text="🏘️ Резиденты", callback_data='residents'))
+
+    user = find_user(callback.message.chat.id)
+    if user:
+        if user['admin']:
+            menu.add(InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'),
+                     InlineKeyboardButton(text="Список мероприятий", callback_data='list_event'))
 
     await state.set_state(Menu.main)
     await callback.message.edit_text('Главное меню:', reply_markup=menu)

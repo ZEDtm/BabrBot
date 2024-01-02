@@ -14,9 +14,8 @@ logging.basicConfig(level=logging.INFO)
 
 async def events_calendar_handler(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(Menu.calendar)
-    events_data = events.find()
     user_id = callback.message.chat.id
-    calendar = await EventCalendar(events_data, user_id).start_calendar()
+    calendar = await EventCalendar(events.find({'public': True}), user_id).start_calendar()
     await callback.message.edit_text('Календарь:\n'
                                      ' 🟢 - Вы участвуете в мероприятии\n'
                                      ' 🟡 - Вы не участвуете в мероприятии\n'
@@ -25,9 +24,8 @@ async def events_calendar_handler(callback: types.CallbackQuery, state: FSMConte
 
 
 async def event_calendar_selected_handler(callback: types.CallbackQuery, state: FSMContext):
-    events_data = events.find()
     user_id = callback.message.chat.id
-    select, date = await EventCalendar(events_data, user_id).process_selection(callback, callback.data)
+    select, date = await EventCalendar(events.find({'public': True}), user_id).process_selection(callback, callback.data)
     if select:
         event = find_event(date)
         await callback.message.answer(event['name'])

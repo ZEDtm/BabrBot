@@ -32,6 +32,7 @@ class Event:
     day: int
     hour: int
     minute: int
+    public: bool
     users: list
 
     def __call__(self):

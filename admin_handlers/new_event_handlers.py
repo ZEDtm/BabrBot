@@ -1,6 +1,7 @@
 import logging
 import re
 
+import admin_handlers.events_handlers
 from config import dp
 from database.collection import events
 from database.models import Event
@@ -160,6 +161,8 @@ async def add_event_set_time(callback: types.CallbackQuery, state: FSMContext):
                           data['day'],
                           time['hour'],
                           time['minute'],
+                          False,
                           [])
             events.insert_one(event())
+        await admin_handlers.events_handlers.event_handle(callback, state, len(events_list) + 1)
 

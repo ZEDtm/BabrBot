@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from os import getenv
+from os import getenv, path
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -11,6 +11,7 @@ TOKEN = getenv('TOKEN')
 MONGO_LOGIN = getenv('MONGO_LOGIN')
 MONGO_PASS = getenv('MONGO_PASS')
 LOG_CHAT = '-1001944137028'
+DIR = path.dirname(path.abspath(__file__))
 
 storage = MemoryStorage()
 bot = Bot(token=TOKEN)

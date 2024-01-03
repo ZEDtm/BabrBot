@@ -1,3 +1,5 @@
+import bson
+from bson import ObjectId
 from pymongo.mongo_client import MongoClient
 from config import MONGO_LOGIN, MONGO_PASS
 

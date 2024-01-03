@@ -1,10 +1,11 @@
+
 import re
 import threading
 from modules import loop_handler
 
 import admin_handlers.new_event_handlers
-from config import dp, logging, loop
-from modules.bot_states import Registration, Menu, ProfileEdit, AdminNewEvent
+from config import dp, logging, loop, bot, DIR
+from modules.bot_states import Registration, Menu, ProfileEdit, AdminNewEvent, AdminArchive
 
 from aiogram import executor, types
 from aiogram.dispatcher import FSMContext
@@ -201,20 +202,50 @@ async def admin_calendar(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.events_handlers.admin_calendar(callback, state)
 
 
-@dp.callback_query_handler(lambda callback: 'admin_event_calendar' in callback.data, state=Menu.main)
+@dp.callback_query_handler(lambda callback: 'admin_event_calendar' in callback.data, state='*')
 async def admin_calendar_select(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.events_handlers.admin_calendar_select(callback, state)
 
 
+# Архив мероприятий
 @dp.callback_query_handler(lambda callback: 'admin_archive' in callback.data, state=Menu.main)
 async def archive_list(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.archive_handlers.archive_list(callback, state)
 
 
-@dp.callback_query_handler(lambda callback: 'archive_list' in callback.data, state=Menu.main)
+@dp.callback_query_handler(lambda callback: 'archive_list' in callback.data, state=AdminArchive)
 async def archive_list_select(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.archive_handlers.archive_list_select(callback, state)
 
+
+@dp.callback_query_handler(lambda callback: 'archive-add-images' in callback.data, state=AdminArchive)
+async def archive_add_images(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.archive_handlers.archive_add_images(callback, state)
+
+
+@dp.message_handler(content_types=['photo'], state=AdminArchive.add_images)
+async def archive_add_images_download(message: types.Message, state: FSMContext):
+    await admin_handlers.archive_handlers.archive_add_images_download(message, state)
+
+
+@dp.callback_query_handler(lambda callback: 'archive-add-video' in callback.data, state=AdminArchive)
+async def archive_add_video(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.archive_handlers.archive_add_video(callback, state)
+
+
+@dp.message_handler(content_types=['video'], state=AdminArchive.add_video)
+async def archive_add_video_download(message: types.Message, state: FSMContext):
+    await admin_handlers.archive_handlers.archive_add_video_download(message, state)
+
+
+@dp.callback_query_handler(lambda callback: 'archive-add-link' in callback.data, state=AdminArchive)
+async def archive_add_link(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.archive_handlers.archive_add_link(callback, state)
+
+
+@dp.message_handler(state=AdminArchive.add_link)
+async def archive_add_link_set(message: types.Message, state: FSMContext):
+    await admin_handlers.archive_handlers.archive_add_link_set(message, state)
 
 @dp.message_handler(state='*')
 async def non_state(message):

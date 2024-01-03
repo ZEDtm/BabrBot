@@ -31,7 +31,7 @@ async def events_to_archive():
                     month=event['month'],
                     day=event['day'],
                     users=event['users'],
-                    link=None,
+                    link=[],
                     images=[],
                     video=[])
                 archive.insert_one(event_to_archive())

@@ -32,6 +32,8 @@ class AdminNewEvent(StatesGroup):
     event_add = State()
 
 
-
-class Calendar(StatesGroup):
-    pass
+class AdminArchive(StatesGroup):
+    list = State()
+    add_images = State()
+    add_video = State()
+    add_link = State()

@@ -40,7 +40,7 @@ async def admin_calendar_select(callback: types.CallbackQuery, state: FSMContext
     event, date, act_id = await AdminEventCalendar(events.find(), archive.find()).process_selection(callback, callback.data)
     if act_id and event:
         await event_handle(callback, state, act_id, date=date)
-    if act_id:
+    elif act_id:
         await archive_handlers.archive_handle(callback, state, archive_id=act_id, date=date)
 
 

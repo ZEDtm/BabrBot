@@ -46,7 +46,7 @@ class Archive:
     month: int
     day: int
     users: list
-    link: None
+    link: list
     images: list
     video: list
 

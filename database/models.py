@@ -20,7 +20,6 @@ class User:
 
 @dataclass
 class Event:
-    id: int
     name: str
     description: str
     price: int
@@ -34,6 +33,22 @@ class Event:
     minute: int
     public: bool
     users: list
+
+    def __call__(self):
+        return asdict(self)
+
+
+@dataclass
+class Archive:
+    name: str
+    description: str
+    year: int
+    month: int
+    day: int
+    users: list
+    link: None
+    images: list
+    video: list
 
     def __call__(self):
         return asdict(self)

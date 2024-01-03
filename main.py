@@ -1,8 +1,9 @@
-import logging
 import re
+import threading
+from modules import loop_handler
 
 import admin_handlers.new_event_handlers
-from config import dp
+from config import dp, logging, loop
 from modules.bot_states import Registration, Menu, ProfileEdit, AdminNewEvent
 
 from aiogram import executor, types
@@ -11,7 +12,7 @@ from aiogram.dispatcher import FSMContext
 from handlers import main_handlers, registration_handlers, profile_handlers, calendar_handlers, residents_handlers
 from admin_handlers import new_event_handlers
 
-logging.basicConfig(level=logging.INFO)
+
 
 
 #  СТРАРТ
@@ -19,6 +20,7 @@ logging.basicConfig(level=logging.INFO)
 @dp.message_handler(lambda message: message.chat.type == 'private')
 async def start(message: types.Message):
     await main_handlers.start(message)
+    logging.info(f'start: {message.from_user.id}')
 
 
 #  РЕГИСТРАЦИЯ
@@ -121,7 +123,8 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
     await main_handlers.menu_handler(callback, state)
 
 
-# АДМИН
+# АДМИНКА
+# Добавление мероприяия
 @dp.callback_query_handler(lambda callback: 'new_event' in callback.data, state=Menu.main)
 async def new_event(callback: types.CallbackQuery, state: FSMContext):
     await new_event_handlers.new_event_handler(callback, state)
@@ -182,17 +185,17 @@ async def add_event_set_calendar(callback: types.CallbackQuery, state: FSMContex
 async def add_event_set_time(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.new_event_handlers.add_event_set_time(callback, state)
 
-
+# Список мероприятий
 @dp.callback_query_handler(lambda callback: 'list_events' in callback.data, state=Menu.main)
 async def list_events(callback: types.CallbackQuery, state: FSMContext):
-    await admin_handlers.events_handlers.list_events(callback, state)
+    await admin_handlers.events_handlers.list_events_public(callback, state)
 
 
 @dp.callback_query_handler(lambda callback: 'events_list' in callback.data, state=Menu.main)
 async def list_events_select(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.events_handlers.list_events_select(callback, state)
 
-
+# Календарь мероприятий
 @dp.callback_query_handler(lambda callback: 'admin_calendar' in callback.data, state=Menu.main)
 async def admin_calendar(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.events_handlers.admin_calendar(callback, state)
@@ -203,10 +206,22 @@ async def admin_calendar_select(callback: types.CallbackQuery, state: FSMContext
     await admin_handlers.events_handlers.admin_calendar_select(callback, state)
 
 
+@dp.callback_query_handler(lambda callback: 'admin_archive' in callback.data, state=Menu.main)
+async def archive_list(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.archive_handlers.archive_list(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'archive_list' in callback.data, state=Menu.main)
+async def archive_list_select(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.archive_handlers.archive_list_select(callback, state)
+
+
 @dp.message_handler(state='*')
 async def non_state(message):
     await message.delete()
+    print(message.chat.id)
 
+loop.create_task(loop_handler.spreader())
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)

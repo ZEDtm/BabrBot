@@ -1,9 +1,11 @@
 import logging
 import re
 from datetime import datetime
+from bson import ObjectId
 
+from admin_handlers import archive_handlers
 from config import dp
-from database.collection import events
+from database.collection import events, archive
 from database.models import Event
 from modules.list_collection import ListEvents
 from modules.bot_states import AdminNewEvent
@@ -30,18 +32,20 @@ async def list_events_select(callback: types.CallbackQuery, state: FSMContext):
 
 
 async def admin_calendar(callback: types.CallbackQuery, state: FSMContext):
-    calendar = await AdminEventCalendar(events.find()).start_calendar()
+    calendar = await AdminEventCalendar(events.find(), archive.find()).start_calendar()
     await callback.message.edit_text('Календарь мероприятий', reply_markup=calendar)
 
 
 async def admin_calendar_select(callback: types.CallbackQuery, state: FSMContext):
-    select, date, event_id = await AdminEventCalendar(events.find()).process_selection(callback, callback.data)
-    if event_id:
-        await event_handle(callback, state, event_id, date=date)
+    event, date, act_id = await AdminEventCalendar(events.find(), archive.find()).process_selection(callback, callback.data)
+    if act_id and event:
+        await event_handle(callback, state, act_id, date=date)
+    if act_id:
+        await archive_handlers.archive_handle(callback, state, archive_id=act_id, date=date)
 
 
-async def event_handle(callback: types.CallbackQuery, state: FSMContext, event_id: int, current_page: int = None, date: dict = None):
-    event = events.find_one({'id': event_id})
+async def event_handle(callback: types.CallbackQuery, state: FSMContext, event_id: str, current_page: int = None, date: dict = None):
+    event = events.find_one({'_id': ObjectId(event_id)})
 
     keyboard = InlineKeyboardMarkup(row_width=1)
     if event['public']:
@@ -59,8 +63,6 @@ async def event_handle(callback: types.CallbackQuery, state: FSMContext, event_i
         keyboard.add(InlineKeyboardButton(text='Назад', callback_data=f"admin_event_calendar:CURRENT:{date['year']}:{date['month']}:{date['day']}"))
     if not event['public']:
         keyboard.add(InlineKeyboardButton(text='В черновик', callback_data=f"menu"))
-
-
 
     text = f"[Дата и время]: {datetime(int(event['year']), int(event['month']), int(event['day']), int(event['hour']), int(event['minute']))}\n"
     text += f"[Название]: {event['name']}\n" \

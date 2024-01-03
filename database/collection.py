@@ -7,6 +7,7 @@ client = MongoClient(uri)
 db = client.BabrBot
 users = db.users
 events = db.events
+archive = db.archive
 
 #event = Event('2023', '12', '29', 'HMM', ['5475217426'])
 #events.insert_one(event())

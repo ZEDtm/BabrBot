@@ -25,6 +25,7 @@ async def start(message: types.Message):
         if user['admin']:
             menu.add(InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'),
                      InlineKeyboardButton(text="Список мероприятий", callback_data='list_events'),
+                     InlineKeyboardButton(text="Архив", callback_data='admin_archive'),
                      InlineKeyboardButton(text="Календарь мероприятий", callback_data='admin_calendar'))
         await Menu.main.set()
         await message.answer(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
@@ -45,6 +46,7 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
         if user['admin']:
             menu.add(InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'),
                      InlineKeyboardButton(text="Список мероприятий", callback_data='list_events'),
+                     InlineKeyboardButton(text="Архив", callback_data='admin_archive'),
                      InlineKeyboardButton(text="Календарь мероприятий", callback_data='admin_calendar'))
 
     await state.set_state(Menu.main)

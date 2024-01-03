@@ -1,4 +1,3 @@
-import logging
 import re
 
 import admin_handlers.events_handlers
@@ -7,14 +6,13 @@ from database.collection import events
 from database.models import Event
 from modules.bot_states import AdminNewEvent
 from modules.calendar_module import SelectDays, NewEventCalendar, SelectTime
+from modules.logger import send_log
 
 from aiogram import executor, types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from handlers import main_handlers, registration_handlers, profile_handlers, calendar_handlers, residents_handlers
-
-logging.basicConfig(level=logging.INFO)
 
 
 async def new_event_handler(callback: types.CallbackQuery, state: FSMContext):
@@ -146,11 +144,9 @@ async def add_event_set_calendar_process(callback: types.CallbackQuery, state: F
 async def add_event_set_time(callback: types.CallbackQuery, state: FSMContext):
     select, time = await SelectTime().process_selection(callback, callback.data)
     if time:
-        events_list = [event for event in events.find()]
         await AdminNewEvent.event_add.set()
         async with state.proxy() as data:
-            event = Event(len(events_list) + 1,
-                          data['name'],
+            event = Event(data['name'],
                           data['description'],
                           data['price'],
                           data['service_description'],
@@ -163,6 +159,8 @@ async def add_event_set_time(callback: types.CallbackQuery, state: FSMContext):
                           time['minute'],
                           False,
                           [])
-            events.insert_one(event())
-        await admin_handlers.events_handlers.event_handle(callback, state, len(events_list) + 1)
+            new_event = events.insert_one(event())
+        await admin_handlers.events_handlers.event_handle(callback, state, str(new_event.inserted_id))
+
+        await send_log(f"Новое мероприятие [{data['name']}] -> Черновик")
 

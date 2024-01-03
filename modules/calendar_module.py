@@ -40,6 +40,8 @@ class EventCalendar:
                     else:
                         current_events.append(int(event['day']))
 
+
+
         inline_kb = InlineKeyboardMarkup(row_width=7)
         ignore_callback = event_calendar_callback.new("IGNORE", year, month, 0)  # for buttons with no answer
         # First row - Month and Year
@@ -157,8 +159,9 @@ class EventCalendar:
 
 
 class AdminEventCalendar:
-    def __init__(self, events):
+    def __init__(self, events, archive):
         self.events = events
+        self.archive = archive
 
     async def start_calendar(
             self,
@@ -181,7 +184,15 @@ class AdminEventCalendar:
                         current_events_public.append(int(event['day']))
                     else:
                         current_events_no_public.append(int(event['day']))
-                    events_id.append(event['id'])
+                    events_id.append(str(event['_id']))
+
+        archive_data = []
+        archive_id = []
+        for arch in self.archive:
+            if int(arch['year']) == year:
+                if int(arch['month']) == month:
+                    archive_data.append(int(arch['day']))
+                    archive_id.append(str(arch['_id']))
 
         inline_kb = InlineKeyboardMarkup(row_width=7)
         ignore_callback = admin_event_calendar_callback.new("IGNORE", year, month, 0)  # for buttons with no answer
@@ -218,7 +229,11 @@ class AdminEventCalendar:
                     continue
                 if day in current_events_no_public:
                     i = current_events_no_public.index(day)
-                    inline_kb.insert(InlineKeyboardButton(str(day)+'🟡', callback_data=admin_event_calendar_callback.new("DAY", year, month, day)+f':{events_id[i]}'))
+                    inline_kb.insert(InlineKeyboardButton(str(day)+'🟡', callback_data=admin_event_calendar_callback.new("event", year, month, day)+f':{events_id[i]}'))
+                    continue
+                if day in archive_data:
+                    i = archive_data.index(day)
+                    inline_kb.insert(InlineKeyboardButton(str(day) + '🔴', callback_data=admin_event_calendar_callback.new("archive", year, month, day) + f':{archive_id[i]}'))
                     continue
                 inline_kb.insert(InlineKeyboardButton(str(day), callback_data=ignore_callback))
 
@@ -243,7 +258,7 @@ class AdminEventCalendar:
         :return: Returns a tuple (Boolean,datetime), indicating if a date is selected
                     and returning the date if so.
         """
-        return_data = (False, None, None)
+        return_data = (None, None, None)
         new_data = {'admin_event_calendar_callback': data.split(sep=':')[0],
                     'act': data.split(sep=':')[1],
                     'year': data.split(sep=':')[2],
@@ -259,9 +274,12 @@ class AdminEventCalendar:
         if new_data['act'] == "IGNORE":
             await query.answer(cache_time=60)
         # user picked a day button, return date
-        if new_data['act'] == "DAY":
+        if new_data['act'] == "archive":
             await query.message.delete_reply_markup()  # removing inline keyboard
-            return_data = True, {'year': year, 'month': month, 'day': day}, int(data.split(sep=':')[5])
+            return_data = False, {'year': year, 'month': month, 'day': day}, str(data.split(sep=':')[5])
+        if new_data['act'] == "event":
+            await query.message.delete_reply_markup()  # removing inline keyboard
+            return_data = True, {'year': year, 'month': month, 'day': day}, str(data.split(sep=':')[5])
         # user navigates to previous year, editing message with new calendar_handler
         if new_data['act'] == "PREV-YEAR":
             prev_date = temp_date - timedelta(days=365)

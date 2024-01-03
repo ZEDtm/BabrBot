@@ -64,6 +64,7 @@ async def end_registration(message: types.Message, state: FSMContext):
         return
 
     async with state.proxy() as data:
+
         data['company_site'] = message.text
     async with state.proxy() as data:
         full_name = data['full_name']

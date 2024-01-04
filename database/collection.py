@@ -10,6 +10,7 @@ db = client.BabrBot
 users = db.users
 events = db.events
 archive = db.archive
+payments = db.payments
 
 #event = Event('2023', '12', '29', 'HMM', ['5475217426'])
 #events.insert_one(event())

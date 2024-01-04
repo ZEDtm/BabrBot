@@ -11,9 +11,9 @@ from modules.logger import send_log
 async def spreader():
     while True:
         await send_log(f'Обработчик задач запущен {datetime.now()}')
-        if datetime(datetime.now().year, datetime.now().month, datetime.now().day, 19, 0, 0)\
+        if datetime(datetime.now().year, datetime.now().month, datetime.now().day, 15, 0, 0)\
                 < datetime.now()\
-                < datetime(datetime.now().year, datetime.now().month, datetime.now().day, 19, 59, 59):
+                < datetime(datetime.now().year, datetime.now().month, datetime.now().day, 15, 59, 59):
 
             loop.create_task(events_to_archive())
         await asyncio.sleep(3600)
@@ -31,9 +31,7 @@ async def events_to_archive():
                     month=event['month'],
                     day=event['day'],
                     users=event['users'],
-                    link=[],
-                    images=[],
-                    video=[])
+                    link='')
                 archive.insert_one(event_to_archive())
                 events.delete_one(event)
 

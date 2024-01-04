@@ -6,7 +6,7 @@ from aiogram.utils.callback_data import CallbackData
 from aiogram.types import CallbackQuery
 
 # setting callback_data prefix and parts
-event_calendar_callback = CallbackData('event_calendar', 'act', 'year', 'month', 'day')
+event_calendar_callback = CallbackData('event_calendar', 'act', 'year', 'month', 'day', 'archive_id')
 new_event_callback = CallbackData('new_event_calendar', 'act', 'year', 'month', 'day')
 admin_event_calendar_callback = CallbackData('admin_event_calendar', 'act', 'year', 'month', 'day')
 calendar_callback = CallbackData('new_event_calendar', 'act', 'year', 'month', 'day')
@@ -14,8 +14,9 @@ months_names = ['', 'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 
 
 
 class EventCalendar:
-    def __init__(self, events, user_id):
+    def __init__(self, events, archive, user_id):
         self.events = events
+        self.archive = archive
         self.user_id = user_id
 
     async def start_calendar(
@@ -31,24 +32,38 @@ class EventCalendar:
         """
         #  check events in db
         current_events = []
+        current_events_id = []
         users_events = []
+        users_events_id = []
         for event in self.events:
-            if int(event['year']) == year:
-                if int(event['month']) == month:
-                    if str(self.user_id) in event['users']:
-                        users_events.append(int(event['day']))
-                    else:
-                        current_events.append(int(event['day']))
+            if int(event['year']) == year and int(event['month']) == month:
+                if str(self.user_id) in event['users']:
+                    users_events.append(int(event['day']))
+                    users_events_id.append(str(event['_id']))
+                else:
+                    current_events.append(int(event['day']))
+                    current_events_id.append(str(event['_id']))
 
-
+        archive_data = []
+        archive_id = []
+        user_archive = []
+        user_archive_id = []
+        for arch in self.archive:
+            if int(arch['year']) == year and int(arch['month']) == month:
+                if str(self.user_id) in arch['users']:
+                    user_archive.append(int(arch['day']))
+                    user_archive_id.append(str(arch['_id']))
+                else:
+                    archive_data.append(int(arch['day']))
+                    archive_id.append(str(arch['_id']))
 
         inline_kb = InlineKeyboardMarkup(row_width=7)
-        ignore_callback = event_calendar_callback.new("IGNORE", year, month, 0)  # for buttons with no answer
+        ignore_callback = event_calendar_callback.new("IGNORE", year, month, 0, ' ')  # for buttons with no answer
         # First row - Month and Year
         inline_kb.row()
         inline_kb.insert(InlineKeyboardButton(
             "<<",
-            callback_data=event_calendar_callback.new("PREV-YEAR", year, month, 1)
+            callback_data=event_calendar_callback.new("PREV-YEAR", year, month, 1, ' ')
         ))
         inline_kb.insert(InlineKeyboardButton(
             f'{months_names[month]} {str(year)}',
@@ -56,7 +71,7 @@ class EventCalendar:
         ))
         inline_kb.insert(InlineKeyboardButton(
             ">>",
-            callback_data=event_calendar_callback.new("NEXT-YEAR", year, month, 1)
+            callback_data=event_calendar_callback.new("NEXT-YEAR", year, month, 1, ' ')
         ))
         # Second row - Week Days
         inline_kb.row()
@@ -73,38 +88,41 @@ class EventCalendar:
                     continue
 
                 elif day in users_events:
-                    if datetime(year, month, day) < datetime.now():
-                        inline_kb.insert(InlineKeyboardButton(
-                            str(day)+'🟠', callback_data=event_calendar_callback.new("DAY", year, month, day)
-                        ))
-                        continue
-
+                    i = users_events.index(day)
                     inline_kb.insert(InlineKeyboardButton(
-                        str(day)+'🟢', callback_data=event_calendar_callback.new("DAY", year, month, day)
+                        str(day) + '🟢', callback_data=event_calendar_callback.new("event", year, month, day, users_events_id[i])
                     ))
                     continue
-
                 elif day in current_events:
-                    if datetime(year, month, day) < datetime.now():
-                        inline_kb.insert(InlineKeyboardButton(
-                            str(day)+'🔴', callback_data=event_calendar_callback.new("DAY", year, month, day)
-                        ))
-                        continue
-
+                    i = current_events.index(day)
                     inline_kb.insert(InlineKeyboardButton(
-                        str(day)+'🟡', callback_data=event_calendar_callback.new("DAY", year, month, day)
+                        str(day) + '🟡', callback_data=event_calendar_callback.new("event", year, month, day, current_events_id[i])
                     ))
                     continue
+
+                elif day in user_archive:
+                    i = user_archive.index(day)
+                    inline_kb.insert(InlineKeyboardButton(
+                        str(day)+'🟠', callback_data=event_calendar_callback.new("archive", year, month, day, user_archive_id[i])
+                    ))
+                    continue
+                elif day in archive_data:
+                    i = archive_data.index(day)
+                    inline_kb.insert(InlineKeyboardButton(
+                        str(day)+'🔴', callback_data=event_calendar_callback.new("archive", year, month, day, archive_id[i])
+                    ))
+                    continue
+
                 inline_kb.insert(InlineKeyboardButton(str(day)+' ', callback_data=ignore_callback))
 
         # Last row - Buttons
         inline_kb.row()
         inline_kb.insert(InlineKeyboardButton(
-            "<", callback_data=event_calendar_callback.new("PREV-MONTH", year, month, day)
+            "<", callback_data=event_calendar_callback.new("PREV-MONTH", year, month, day, ' ')
         ))
         inline_kb.insert(InlineKeyboardButton("В меню", callback_data='menu'))
         inline_kb.insert(InlineKeyboardButton(
-            ">", callback_data=event_calendar_callback.new("NEXT-MONTH", year, month, day)
+            ">", callback_data=event_calendar_callback.new("NEXT-MONTH", year, month, day, ' ')
         ))
 
         return inline_kb
@@ -118,7 +136,7 @@ class EventCalendar:
         :return: Returns a tuple (Boolean,datetime), indicating if a date is selected
                     and returning the date if so.
         """
-        return_data = (False, None)
+        return_data = (None, None, None)
         new_data = {'simple_calendar': data.split(sep=':')[0],
                     'act': data.split(sep=':')[1],
                     'year': data.split(sep=':')[2],
@@ -134,10 +152,12 @@ class EventCalendar:
         if new_data['act'] == "IGNORE":
             await query.answer(cache_time=60)
         # user picked a day button, return date
-        if new_data['act'] == "DAY":
+        if new_data['act'] == "archive":
             await query.message.delete_reply_markup()  # removing inline keyboard
-            return_data = True, {'year': year, 'month': month, 'day': day}
-            #return_data = True, datetime(year, month, day)
+            return_data = False, {'year': year, 'month': month, 'day': day}, data.split(sep=':')[5]
+        if new_data['act'] == "event":
+            await query.message.delete_reply_markup()  # removing inline keyboard
+            return_data = True, {'year': year, 'month': month, 'day': day}, data.split(sep=':')[5]
         # user navigates to previous year, editing message with new calendar_handler
         if new_data['act'] == "PREV-YEAR":
             prev_date = temp_date - timedelta(days=365)
@@ -155,6 +175,8 @@ class EventCalendar:
             next_date = temp_date + timedelta(days=31)
             await query.message.edit_reply_markup(await self.start_calendar(int(next_date.year), int(next_date.month)))
         # at some point user clicks DAY button, returning date
+        if new_data['act'] == "CURRENT":
+            await query.message.edit_reply_markup(await self.start_calendar(int(year), int(month)))
         return return_data
 
 

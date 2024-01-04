@@ -46,9 +46,26 @@ class Archive:
     month: int
     day: int
     users: list
-    link: list
-    images: list
-    video: list
+    link: str
+
+    def __call__(self):
+        return asdict(self)
+
+
+@dataclass
+class Payment:
+    user_id: int
+    info: list
+    total_amount: int
+    invoice_payload: str
+    telegram_payment_charge_id: str
+    provider_payment_charge_id: str
+    year: int
+    month: int
+    day: int
+    hour: int
+    minute: int
+    second: int
 
     def __call__(self):
         return asdict(self)

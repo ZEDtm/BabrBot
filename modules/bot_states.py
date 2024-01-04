@@ -6,6 +6,7 @@ class Menu(StatesGroup):
     main = State()
     profile = State()
     calendar = State()
+    archive = State()
 
 
 class ProfileEdit(StatesGroup):
@@ -20,6 +21,9 @@ class Registration(StatesGroup):
     company_name = State()
     company_site = State()
 
+
+class EventSubscribe(StatesGroup):
+    services = State()
 
 class AdminNewEvent(StatesGroup):
     event_long = State()

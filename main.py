@@ -1,11 +1,13 @@
 
 import re
 import threading
+
+import handlers.calendar_handlers
 from modules import loop_handler
 
 import admin_handlers.new_event_handlers
 from config import dp, logging, loop, bot, DIR
-from modules.bot_states import Registration, Menu, ProfileEdit, AdminNewEvent, AdminArchive
+from modules.bot_states import Registration, Menu, ProfileEdit, AdminNewEvent, AdminArchive, EventSubscribe
 
 from aiogram import executor, types
 from aiogram.dispatcher import FSMContext
@@ -102,7 +104,7 @@ async def calendar_handler(callback: types.CallbackQuery, state: FSMContext):
     await calendar_handlers.events_calendar_handler(callback, state)
 
 
-@dp.callback_query_handler(lambda callback: re.match(r'^event_calendar:(.*)', callback.data), state=Menu.calendar)
+@dp.callback_query_handler(lambda callback: re.match(r'^event_calendar:(.*)', callback.data), state=Menu)
 async def event_calendar_selected_handler(callback: types.CallbackQuery, state: FSMContext):
     await calendar_handlers.event_calendar_selected_handler(callback, state)
 
@@ -122,6 +124,44 @@ async def resident_info(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(lambda callback: 'menu' in callback.data, state='*')
 async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
     await main_handlers.menu_handler(callback, state)
+
+
+#ПОДПИСКА НА ИВЕНТ
+@dp.callback_query_handler(lambda callback: 'subscribe-event' in callback.data, state=Menu)
+async def event_subscribe(callback: types.CallbackQuery, state: FSMContext):
+    await handlers.subscribe_handlers.event_subscribe(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'subscribe-event-select' in callback.data
+                                            or 'subscribe-event-delete' in callback.data, state=EventSubscribe)
+async def event_subscribe_select(callback: types.CallbackQuery, state: FSMContext):
+    await handlers.subscribe_handlers.event_subscribe_select(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'event_payment_receipt' in callback.data, state=EventSubscribe)
+async def event_payment_receipt(callback: types.CallbackQuery, state: FSMContext):
+    await handlers.subscribe_handlers.event_payment_receipt(callback, state)
+
+
+@dp.pre_checkout_query_handler(state=EventSubscribe)
+async def event_payment_pre_checkout(pre_checkout_query: types.PreCheckoutQuery, state=FSMContext):
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True, error_message='Ошибка')
+
+
+@dp.message_handler(lambda message: 'event-sub' in message.successful_payment.invoice_payload,
+                    content_types=types.ContentType.SUCCESSFUL_PAYMENT, state=EventSubscribe)
+async def event_payment_checkout(message: types.Message, state: FSMContext):
+    await handlers.subscribe_handlers.event_payment_checkout(message, state)
+
+#АРХИВ
+@dp.callback_query_handler(lambda callback: 'archive-images' in callback.data, state=Menu.archive)
+async def archive_selected_images(callback: types.CallbackQuery, state: FSMContext):
+    await handlers.calendar_handlers.archive_selected_images(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'archive-video' in callback.data, state=Menu.archive)
+async def archive_selected_video(callback: types.CallbackQuery, state: FSMContext):
+    await handlers.calendar_handlers.archive_selected_video(callback, state)
 
 
 # АДМИНКА

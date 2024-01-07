@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from os import path, listdir
 
-from database.collection import events, find_event, archive
+from database.collection import events, find_event, archive, payments
 from modules.bot_states import Menu
 from config import DIR, bot
 from bson import ObjectId
@@ -11,7 +11,7 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.dispatcher import FSMContext
 
-from modules.calendar_module import EventCalendar
+from modules.bot_calendar_module import EventCalendar
 
 
 logging.basicConfig(level=logging.INFO)
@@ -39,26 +39,33 @@ async def event_calendar_selected_handler(callback: types.CallbackQuery, state: 
 
 
 async def event_selected(callback: types.CallbackQuery, state: FSMContext, event_id):
-    print(callback.data)
     await Menu.calendar.set()
     event = events.find_one({'_id': ObjectId(event_id)})
     keyboard = InlineKeyboardMarkup()
-    if str(callback.message.chat.id) in event['users']:
-        pass
-    else:
+    if int(callback.message.chat.id) not in event['users']:
         keyboard.add(InlineKeyboardButton(text='Учавствовать', callback_data=f'subscribe-event%{event_id}'))
-
+    else:
+        payment = payments.find_one({'user_id': int(callback.message.chat.id), 'binding': event_id})
+        keyboard.add(InlineKeyboardButton(text='Чек оплаты', callback_data=f"payment-check%{payment['_id']}"))
     keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
                  InlineKeyboardButton(text='Назад', callback_data=f"event_calendar:CURRENT:{event['year']}:{event['month']}:{event['day']}: "))
 
     start_event = datetime(int(event['year']), int(event['month']), int(event['day']), int(event['hour']), int(event['minute']))
     end_event = start_event + timedelta(days=int(event['duration']))
-    text = f"Мероприятие [{event['name']}]\n" \
-           f"[{start_event.strftime('%Y.%m.%d')}->{end_event.strftime('%Y.%m.%d')}]\n\n" \
-           f"{event['description']}\n\n" \
-           f"Начало: {start_event.strftime('%H:%M')}\n" \
-           f"Участников: {len(event['users'])}\n" \
-           f"Стоимость: {event['price']}₽\n"
+
+    if int(callback.message.chat.id) in event['users']:
+        text = f"Мероприятие [{event['name']}]\n" \
+               f"[{start_event.strftime('%d.%m.%Y')}->{end_event.strftime('%d.%m.%Y')}]\n\n" \
+               f"{event['description']}\n\n" \
+               f"Начало: {start_event.strftime('%H:%M')}\n" \
+               f"Участников: {len(event['users'])}\n"
+    else:
+        text = f"Мероприятие [{event['name']}]\n" \
+               f"[{start_event.strftime('%Y.%m.%d')}->{end_event.strftime('%Y.%m.%d')}]\n\n" \
+               f"{event['description']}\n\n" \
+               f"Начало: {start_event.strftime('%H:%M')}\n" \
+               f"Участников: {len(event['users'])}\n" \
+               f"Стоимость: {event['price']}₽\n"
     for service, price in zip(event['service_description'], event['service_price']):
         text += f"*{service}: {price}₽\n"
     await callback.message.edit_text(text, reply_markup=keyboard)

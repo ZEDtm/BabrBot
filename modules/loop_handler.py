@@ -1,28 +1,68 @@
 import logging
 from datetime import datetime, timedelta
-from config import loop
+from config import loop, bot, banned_users
 import asyncio
 
-from database.collection import archive, events
+from database.collection import archive, events, users
 from database.models import Archive
 from modules.logger import send_log
 
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 
 async def spreader():
+    loop.create_task(events_to_archive())
+    loop.create_task(check_subscribe(True))
+    loop.create_task(notification())
     while True:
-        await send_log(f'Обработчик задач запущен {datetime.now()}')
-        if datetime(datetime.now().year, datetime.now().month, datetime.now().day, 15, 0, 0)\
-                < datetime.now()\
-                < datetime(datetime.now().year, datetime.now().month, datetime.now().day, 15, 59, 59):
-
+        year, month, day, hour = datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour
+        if datetime(year, month, day, 21, 0, 0) < datetime.now() < datetime(year, month, day, 21, 59, 59):
             loop.create_task(events_to_archive())
+        if datetime(year, month, day, 8, 0, 0) < datetime.now() < datetime(year, month, day, 8, 59, 59):
+            loop.create_task(notification())
+        if day == 1 and hour == 8 or day == 1 and hour == 18:
+            loop.create_task(check_subscribe())
+        if day == 2 and hour == 0:
+            loop.create_task(check_subscribe(True))
         await asyncio.sleep(3600)
+
+
+async def notification():
+    for event in events.find():
+        keyboard = InlineKeyboardMarkup()
+
+        now = datetime(datetime.now().year, datetime.now().month, datetime.now().day, 0, 0, 0)
+        date = datetime(int(event['year']), int(event['month']), int(event['day']), 0, 0, 0)
+
+        if date - timedelta(days=7) == now:
+            keyboard.add(InlineKeyboardButton(text=f"{event['name']}", callback_data=f"event_calendar:event:{date.year}:{date.month}:{date.day}:{str(event['_id'])}"))
+            for user_id in event['users']:
+                try:
+                    await bot.send_message(user_id, f"До начала мероприятия [{event['name']}] неделя:", reply_markup=keyboard)
+                except:
+                    pass
+
+        if date - timedelta(days=3) == now:
+            keyboard.add(InlineKeyboardButton(text=f"{event['name']}", callback_data=f"event_calendar:event:{date.year}:{date.month}:{date.day}:{str(event['_id'])}"))
+            for user_id in event['users']:
+                try:
+                    await bot.send_message(user_id, f"До начала мероприятия [{event['name']}] 3 дня:", reply_markup=keyboard)
+                except:
+                    pass
+
+        if date - timedelta(days=1) == now:
+            keyboard.add(InlineKeyboardButton(text=f"{event['name']}", callback_data=f"event_calendar:event:{date.year}:{date.month}:{date.day}:{str(event['_id'])}"))
+            for user_id in event['users']:
+                try:
+                    await bot.send_message(user_id, f"Мероприятие [{event['name']}] начнется завтра, не пропустите!:", reply_markup=keyboard)
+                except:
+                    pass
 
 
 async def events_to_archive():
     for event in events.find():
         date = datetime(int(event['year']), int(event['month']), int(event['day']), int(event['hour']), int(event['minute']))
-        if date < datetime.now():
+        if date + timedelta(days=event['duration']) < datetime.now():
             if event['public']:
                 event_to_archive = Archive(
                     name=event['name'],
@@ -42,3 +82,21 @@ async def events_to_archive():
                 events.update_one(event, new)
 
                 await send_log(f"Черновик [{event['name']}] -> {new_date}")
+
+
+async def check_subscribe(blocked=False):
+    for user in users.find():
+        user_id = user['user_id']
+        date_subscribe = datetime(int(user['subscribe_year']), int(user['subscribe_month']), int(user['subscribe_day']))
+        if date_subscribe + timedelta(weeks=4) < datetime.now():
+            if blocked:
+                banned_users.add(user_id)
+                continue
+            keyboard = InlineKeyboardMarkup()
+            keyboard.add(InlineKeyboardButton(text='Оформить подписку', callback_data=f"user-subscribe"))
+            try:
+                await bot.send_message(user_id, 'Ваша подписка истекает. Оформите подписку:', reply_markup=keyboard)
+            except:
+                pass
+
+

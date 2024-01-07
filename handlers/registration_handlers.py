@@ -1,6 +1,6 @@
 import re
 import logging
-
+from datetime import datetime
 from database.collection import users
 from database.models import User
 from modules.bot_states import Registration
@@ -73,16 +73,19 @@ async def end_registration(message: types.Message, state: FSMContext):
         company_site = data['company_site']
     await state.finish()
 
-    user = User(int(message.from_user.id),
-                message.from_user.first_name,
-                message.from_user.last_name,
-                message.from_user.username,
-                full_name,
-                phone_number,
-                company_name,
-                company_site,
-                [],
-                False)
+    user = User(user_id=int(message.from_user.id),
+                telegram_first_name=message.from_user.first_name,
+                telegram_last_name=message.from_user.last_name,
+                telegram_user_name=message.from_user.username,
+                full_name=full_name,
+                phone_number=phone_number,
+                company_name=company_name,
+                company_site=company_site,
+                events=[],
+                admin=False,
+                subscribe_year=datetime.now().year,
+                subscribe_month=datetime.now().month,
+                subscribe_day=datetime.now().day)
     users.insert_one(user())
 
     edit = InlineKeyboardMarkup()

@@ -1,3 +1,4 @@
+import datetime
 from dataclasses import dataclass, asdict
 
 
@@ -13,6 +14,9 @@ class User:
     company_site: str
     events: list
     admin: bool
+    subscribe_year: int
+    subscribe_month: int
+    subscribe_day: int
 
     def __call__(self):
         return asdict(self)
@@ -55,6 +59,7 @@ class Archive:
 @dataclass
 class Payment:
     user_id: int
+    binding: str
     info: list
     total_amount: int
     invoice_payload: str

@@ -5,7 +5,7 @@ from config import dp
 from database.collection import events
 from database.models import Event
 from modules.bot_states import AdminNewEvent
-from modules.calendar_module import SelectDays, NewEventCalendar, SelectTime
+from modules.bot_calendar_module import SelectDays, NewEventCalendar, SelectTime
 from modules.logger import send_log
 
 from aiogram import executor, types

@@ -37,7 +37,7 @@ class EventCalendar:
         users_events_id = []
         for event in self.events:
             if int(event['year']) == year and int(event['month']) == month:
-                if str(self.user_id) in event['users']:
+                if int(self.user_id) in event['users']:
                     users_events.append(int(event['day']))
                     users_events_id.append(str(event['_id']))
                 else:

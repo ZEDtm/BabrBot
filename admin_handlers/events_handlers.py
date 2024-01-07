@@ -9,7 +9,7 @@ from database.collection import events, archive
 from database.models import Event
 from modules.list_collection import ListEvents
 from modules.bot_states import AdminNewEvent
-from modules.calendar_module import SelectDays, NewEventCalendar, SelectTime, AdminEventCalendar
+from modules.bot_calendar_module import SelectDays, NewEventCalendar, SelectTime, AdminEventCalendar
 
 from aiogram import executor, types
 from aiogram.dispatcher import FSMContext

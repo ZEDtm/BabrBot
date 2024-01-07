@@ -6,7 +6,7 @@ import handlers.calendar_handlers
 from modules import loop_handler
 
 import admin_handlers.new_event_handlers
-from config import dp, logging, loop, bot, DIR
+from config import dp, logging, loop, bot, DIR, banned_users
 from modules.bot_states import Registration, Menu, ProfileEdit, AdminNewEvent, AdminArchive, EventSubscribe
 
 from aiogram import executor, types
@@ -16,23 +16,57 @@ from handlers import main_handlers, registration_handlers, profile_handlers, cal
 from admin_handlers import new_event_handlers
 
 
+#ПОДПИСКА
+@dp.pre_checkout_query_handler(state=EventSubscribe)
+async def event_payment_pre_checkout(pre_checkout_query: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+
+@dp.pre_checkout_query_handler(state='*')
+async def event_payment_pre_checkout(pre_checkout_query: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+
+@dp.message_handler(content_types=types.ContentType.SUCCESSFUL_PAYMENT, state='*')
+async def event_payment_checkout(message: types.Message, state: FSMContext):
+    if 'event-sub' in message.successful_payment.invoice_payload:
+        await handlers.subscribe_handlers.event_payment_checkout(message, state)
+    if 'user-sub' in message.successful_payment.invoice_payload:
+        await handlers.subscribe_handlers.subscribe_payment_checkout(message, state)
+
+
+@dp.callback_query_handler(lambda callback: 'user-subscribe' in callback.data, state='*')
+async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMContext):
+    await handlers.subscribe_handlers.subscribe_payment_receipt(callback, state)
 
 
 #  СТРАРТ
+@dp.message_handler(lambda message: message.from_user.id in banned_users, state='*')
+async def handle_banned(message: types.Message):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Оформить подписку', callback_data='user-subscribe'))
+    await message.answer('Оформить подписку', reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda callback: callback.message.chat.id in banned_users, state='*')
+async def handle_banned(callback: types.CallbackQuery):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Оформить подписку', callback_data='user-subscribe'))
+    await callback.message.edit_text('Оформить подписку', reply_markup=keyboard)
+
+
 @dp.message_handler(commands='start', state='*')
-@dp.message_handler(lambda message: message.chat.type == 'private')
 async def start(message: types.Message):
     await main_handlers.start(message)
-    logging.info(f'start: {message.from_user.id}')
 
 
 #  РЕГИСТРАЦИЯ
-@dp.callback_query_handler(lambda callback: 'cancel_reg' in callback.data)
+@dp.callback_query_handler(lambda callback: 'cancel_reg' in callback.data, state='*')
 async def cancel_registration(callback: types.CallbackQuery):
     await registration_handlers.cancel_registration(callback)
 
 
-@dp.callback_query_handler(lambda callback: callback.data == 'start_reg')
+@dp.callback_query_handler(lambda callback: 'start_reg' in callback.data, state='*')
 async def registration_full_name(callback: types.CallbackQuery):
     await registration_handlers.registration_full_name(callback)
 
@@ -104,7 +138,7 @@ async def calendar_handler(callback: types.CallbackQuery, state: FSMContext):
     await calendar_handlers.events_calendar_handler(callback, state)
 
 
-@dp.callback_query_handler(lambda callback: re.match(r'^event_calendar:(.*)', callback.data), state=Menu)
+@dp.callback_query_handler(lambda callback: re.match(r'^event_calendar:(.*)', callback.data), state='*')
 async def event_calendar_selected_handler(callback: types.CallbackQuery, state: FSMContext):
     await calendar_handlers.event_calendar_selected_handler(callback, state)
 
@@ -143,15 +177,11 @@ async def event_payment_receipt(callback: types.CallbackQuery, state: FSMContext
     await handlers.subscribe_handlers.event_payment_receipt(callback, state)
 
 
-@dp.pre_checkout_query_handler(state=EventSubscribe)
-async def event_payment_pre_checkout(pre_checkout_query: types.PreCheckoutQuery, state=FSMContext):
-    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True, error_message='Ошибка')
+@dp.callback_query_handler(lambda callback: 'payment-check' in callback.data, state='*')
+async def event_payment_receipt(callback: types.CallbackQuery, state: FSMContext):
+    await handlers.subscribe_handlers.payment_check(callback, state)
 
 
-@dp.message_handler(lambda message: 'event-sub' in message.successful_payment.invoice_payload,
-                    content_types=types.ContentType.SUCCESSFUL_PAYMENT, state=EventSubscribe)
-async def event_payment_checkout(message: types.Message, state: FSMContext):
-    await handlers.subscribe_handlers.event_payment_checkout(message, state)
 
 #АРХИВ
 @dp.callback_query_handler(lambda callback: 'archive-images' in callback.data, state=Menu.archive)
@@ -292,7 +322,8 @@ async def non_state(message):
     await message.delete()
     print(message.chat.id)
 
-loop.create_task(loop_handler.spreader())
+
 
 if __name__ == '__main__':
+    loop.create_task(loop_handler.spreader())
     executor.start_polling(dp, skip_updates=True)

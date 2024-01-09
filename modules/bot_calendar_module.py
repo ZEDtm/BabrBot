@@ -62,15 +62,15 @@ class EventCalendar:
         # First row - Month and Year
         inline_kb.row()
         inline_kb.insert(InlineKeyboardButton(
-            "<<",
+            "⏮",
             callback_data=event_calendar_callback.new("PREV-YEAR", year, month, 1, ' ')
         ))
         inline_kb.insert(InlineKeyboardButton(
-            f'{months_names[month]} {str(year)}',
+            f'🗓 {months_names[month]} {str(year)[2:4]}',
             callback_data=ignore_callback
         ))
         inline_kb.insert(InlineKeyboardButton(
-            ">>",
+            "⏭",
             callback_data=event_calendar_callback.new("NEXT-YEAR", year, month, 1, ' ')
         ))
         # Second row - Week Days
@@ -118,11 +118,11 @@ class EventCalendar:
         # Last row - Buttons
         inline_kb.row()
         inline_kb.insert(InlineKeyboardButton(
-            "<", callback_data=event_calendar_callback.new("PREV-MONTH", year, month, day, ' ')
+            "⬅️", callback_data=event_calendar_callback.new("PREV-MONTH", year, month, day, ' ')
         ))
-        inline_kb.insert(InlineKeyboardButton("В меню", callback_data='menu'))
+        inline_kb.insert(InlineKeyboardButton("🏠 В меню", callback_data='menu'))
         inline_kb.insert(InlineKeyboardButton(
-            ">", callback_data=event_calendar_callback.new("NEXT-MONTH", year, month, day, ' ')
+            "➡", callback_data=event_calendar_callback.new("NEXT-MONTH", year, month, day, ' ')
         ))
 
         return inline_kb
@@ -247,7 +247,7 @@ class AdminEventCalendar:
                     continue
                 if day in current_events_public:
                     i = current_events_public.index(day)
-                    inline_kb.insert(InlineKeyboardButton(str(day)+'🟢', callback_data=admin_event_calendar_callback.new("DAY", year, month, day)+f':{events_id[i]}'))
+                    inline_kb.insert(InlineKeyboardButton(str(day)+'🟢', callback_data=admin_event_calendar_callback.new("event", year, month, day)+f':{events_id[i]}'))
                     continue
                 if day in current_events_no_public:
                     i = current_events_no_public.index(day)

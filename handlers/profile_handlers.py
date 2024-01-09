@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 async def profile_handler(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(Menu.profile)
-    user = find_user(callback.message.chat.id)
+    user = find_user(callback.from_user.id)
 
     edit = InlineKeyboardMarkup()
     button = InlineKeyboardButton(text='Редактировать анкету', callback_data='edit_profile')

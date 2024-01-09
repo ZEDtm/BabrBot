@@ -7,6 +7,7 @@ uri = f"mongodb+srv://{MONGO_LOGIN}:{MONGO_PASS}@atlascluster.u3h56sm.mongodb.ne
 client = MongoClient(uri)
 
 db = client.BabrBot
+db_config = db.config
 users = db.users
 events = db.events
 archive = db.archive

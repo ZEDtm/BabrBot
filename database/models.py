@@ -10,10 +10,29 @@ class User:
     telegram_user_name: str
     full_name: str
     phone_number: str
+    description: str
+    image: str
     company_name: str
     company_site: str
-    events: list
-    admin: bool
+    subscribe_year: int
+    subscribe_month: int
+    subscribe_day: int
+
+    def __call__(self):
+        return asdict(self)
+
+@dataclass
+class Admin:
+    user_id: int
+    telegram_first_name: str
+    telegram_last_name: str
+    telegram_user_name: str
+    full_name: str
+    phone_number: str
+    description: str
+    image: None
+    company_name: str
+    company_site: None
     subscribe_year: int
     subscribe_month: int
     subscribe_day: int

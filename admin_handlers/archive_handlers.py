@@ -23,7 +23,7 @@ from handlers import main_handlers, registration_handlers, profile_handlers, cal
 async def archive_list(callback: types.CallbackQuery, state: FSMContext):
     await AdminArchive.list.set()
     keyboard = await ListArchive().start_collection(archive.find())
-    await callback.message.answer('Архив', reply_markup=keyboard)
+    await callback.message.edit_text('🗄 Архив: список', reply_markup=keyboard)
 
 
 async def archive_list_select(callback: types.CallbackQuery, state: FSMContext):
@@ -37,25 +37,24 @@ async def archive_handle(callback: types.CallbackQuery, state: FSMContext, archi
     arch = archive.find_one({'_id': ObjectId(archive_id)})
 
     keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton(text='Добавить фото', callback_data=f"archive-add-images%{archive_id}"))
-    keyboard.add(InlineKeyboardButton(text='Добавить видео', callback_data=f"archive-add-video%{archive_id}"))
-    keyboard.add(InlineKeyboardButton(text='Добавить ссылку', callback_data=f"archive-add-link%{archive_id}"))
+    keyboard.add(InlineKeyboardButton(text='📷 Добавить фото', callback_data=f"archive-add-images%{archive_id}"))
+    keyboard.add(InlineKeyboardButton(text='🎥 Добавить видео', callback_data=f"archive-add-video%{archive_id}"))
+    keyboard.add(InlineKeyboardButton(text='☁ Добавить ссылку', callback_data=f"archive-add-link%{archive_id}"))
 
     if current_page:
         async with state.proxy() as data:
             data['callback_data'] = f"archive_list-y-{archive_id}-{current_page}"
-        keyboard.add(InlineKeyboardButton(text='В меню', callback_data=f"menu"),
-                     InlineKeyboardButton(text='Назад', callback_data=f"archive_list-n-{current_page}"))
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data=f"menu"),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=f"archive_list-n-{current_page}"))
     if date:
         async with state.proxy() as data:
             data['callback_data'] = f"admin_event_calendar:archive:{date['year']}:{date['month']}:{date['day']}:{archive_id}"
-        keyboard.add(InlineKeyboardButton(text='В меню', callback_data=f"menu"),
-                     InlineKeyboardButton(text='Назад', callback_data=f"admin_event_calendar:CURRENT:{date['year']}:{date['month']}:{date['day']}"))
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data=f"menu"),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=f"admin_event_calendar:CURRENT:{date['year']}:{date['month']}:{date['day']}"))
 
-    date_format = datetime(int(arch['year']), int(arch['month']), int(arch['day'])).strftime('%Y.%m.%d')
-    text = f"[{date_format}]" \
-           f"[Архив]: {arch['name']}\n" \
-           f"[Описание]:\n{arch['description']}\n"
+    date_format = datetime(int(arch['year']), int(arch['month']), int(arch['day'])).strftime('%d.%m.%Y')
+    text = f"📆 Дата: {date_format}\n🗄 Название: {arch['name']}\n\n" \
+           f"📖 Описание:\n{arch['description']}\n"
     await callback.message.edit_text(text, reply_markup=keyboard)
 
 
@@ -66,10 +65,10 @@ async def archive_add_images(callback: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
         data['archive_id'] = callback.data.split(sep='%')[1]
 
-        keyboard.add(InlineKeyboardButton(text='В меню', callback_data=f"menu"),
-                     InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data=f"menu"),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=data['callback_data']))
 
-    await callback.message.edit_text('Пришлите фотографии:', reply_markup=keyboard)
+    await callback.message.edit_text('📷 Пришлите фотографии:', reply_markup=keyboard)
 
 
 async def archive_add_images_download(message: types.Message, state: FSMContext):
@@ -79,13 +78,13 @@ async def archive_add_images_download(message: types.Message, state: FSMContext)
     # Получаем последнюю фотографию
     last_photo = photo_sizes[-1]
     async with state.proxy() as data:
-        keyboard.add(InlineKeyboardButton(text='В меню', callback_data=f"menu"),
-                     InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data=f"menu"),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=data['callback_data']))
 
         file = await bot.get_file(last_photo.file_id)
         file_name = f'{last_photo.file_id}.jpg'
         await bot.download_file(file.file_path, destination=f"{DIR}/archive/{data['archive_id']}/images/{file_name}")
-    await message.reply('Загружено', reply_markup=keyboard)
+    await message.reply('💾 Успешно загружено', reply_markup=keyboard)
 
 
 async def archive_add_video(callback: types.CallbackQuery, state: FSMContext):
@@ -95,23 +94,23 @@ async def archive_add_video(callback: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
         data['archive_id'] = callback.data.split(sep='%')[1]
 
-        keyboard.add(InlineKeyboardButton(text='В меню', callback_data=f"menu"),
-                     InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data=f"menu"),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=data['callback_data']))
 
-    await callback.message.edit_text('Пришлите видео:', reply_markup=keyboard)
+    await callback.message.edit_text('🎥 Пришлите видео:', reply_markup=keyboard)
 
 
 async def archive_add_video_download(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup()
 
     async with state.proxy() as data:
-        keyboard.add(InlineKeyboardButton(text='В меню', callback_data=f"menu"),
-                     InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data=f"menu"),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=data['callback_data']))
 
     file_id = message.video.file_id
     file = await bot.get_file(file_id)
     await bot.download_file(file.file_path, f"{DIR}/archive/{data['archive_id']}/video/{file_id}.mp4")
-    await message.reply('Загружено', reply_markup=keyboard)
+    await message.reply('💾 Успешно загружено', reply_markup=keyboard)
 
 
 async def archive_add_link(callback: types.CallbackQuery, state: FSMContext):
@@ -122,10 +121,10 @@ async def archive_add_link(callback: types.CallbackQuery, state: FSMContext):
         data['archive_id'] = callback.data.split(sep='%')[1]
         print(data['callback_data'])
 
-        keyboard.add(InlineKeyboardButton(text='В меню', callback_data=f"menu"),
-                     InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data=f"menu"),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=data['callback_data']))
 
-    await callback.message.edit_text('Пришлите ссылку:', reply_markup=keyboard)
+    await callback.message.edit_text('☁ Пришлите ссылку:', reply_markup=keyboard)
 
 
 async def archive_add_link_set(message: types.Message, state: FSMContext):
@@ -136,9 +135,9 @@ async def archive_add_link_set(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup()
 
     async with state.proxy() as data:
-        keyboard.add(InlineKeyboardButton(text='В меню', callback_data=f"menu"),
-                     InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data=f"menu"),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=data['callback_data']))
 
         archive.update_one({'_id': ObjectId(data['archive_id'])},  {"$set": {'link': message.text}})
     await AdminArchive.list.set()
-    await message.answer('Ссылка обновлена', reply_markup=keyboard)
+    await message.answer('💾 Ссылка обновлена', reply_markup=keyboard)

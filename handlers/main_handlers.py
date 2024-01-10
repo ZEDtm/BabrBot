@@ -21,19 +21,26 @@ async def start(message: types.Message):
             referral_link.discard(message.text.split()[1])
             await send_log(f"Пользователь[{message.from_user.id}] -> Администратор")
 
-    menu = InlineKeyboardMarkup(row_width=1)
+
     user = find_user(message.from_user.id)
     if message.from_user.id in admins:
         if not user:
             await registration_admin(message, message.from_user.id)
-        menu.add(InlineKeyboardButton(text="📅 Календарь мероприятий", callback_data='admin_calendar'),
-                 InlineKeyboardButton(text="👥 Пользователи", callback_data='list-users'),
-                 InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'),
-                 InlineKeyboardButton(text="📖 Список мероприятий", callback_data='list_events'),
-                 InlineKeyboardButton(text="🗄️ Архив", callback_data='admin_archive'),
-                 InlineKeyboardButton(text="Установить стоимость подписки", callback_data='subscribe-amount'))
-    if user:
-
+        menu = InlineKeyboardMarkup()
+        menu.add(InlineKeyboardButton(text="📅 Управление", callback_data='admin_calendar'),
+                 InlineKeyboardButton(text="📅 Мероприятия", callback_data='calendar_handler'))
+        menu.add(InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'))
+        menu.add(InlineKeyboardButton(text="📖 Мероприятия", callback_data='list_events'),
+                 InlineKeyboardButton(text="🗄️ Архив", callback_data='admin_archive'))
+        menu.add(InlineKeyboardButton(text="👥 Группы", callback_data='list-users'),
+                 InlineKeyboardButton(text="🏘️ Резиденты", callback_data='list-residents'))
+        menu.add(InlineKeyboardButton(text="📢 Сообщение резидентам", callback_data='notify-users'))
+        menu.add(InlineKeyboardButton(text="💰 Цена подписки", callback_data='subscribe-amount'))
+        await Menu.main.set()
+        await message.answer(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
+        await message.delete()
+    elif user:
+        menu = InlineKeyboardMarkup(row_width=1)
         menu.add(InlineKeyboardButton(text="🌟 Профиль", callback_data='profile'),
                  InlineKeyboardButton(text="📅 Календарь", callback_data='calendar_handler'),
                  InlineKeyboardButton(text="🏘️ Резиденты", callback_data='list-residents'))
@@ -57,20 +64,22 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
     menu = InlineKeyboardMarkup(row_width=1)
     user = find_user(callback.from_user.id)
     if callback.from_user.id in admins:
-        menu.add(InlineKeyboardButton(text="📅 Календарь мероприятий", callback_data='admin_calendar'),
-                 InlineKeyboardButton(text="👥 Пользователи", callback_data='list-users'),
-                 InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'),
-                 InlineKeyboardButton(text="📖 Список мероприятий", callback_data='list_events'),
-                 InlineKeyboardButton(text="🗄️ Архив", callback_data='admin_archive'),
-                 InlineKeyboardButton(text="Оповещение для резидентов", callback_data='notify-users'),
-                 InlineKeyboardButton(text="Установить стоимость подписки", callback_data='subscribe-amount'))
-
-        await Menu.main.set()
-
         if not user:
             await registration_admin(callback, callback.from_user.id)
-
-    if user:
+        menu = InlineKeyboardMarkup()
+        menu.add(InlineKeyboardButton(text="📅 Управление", callback_data='admin_calendar'),
+                 InlineKeyboardButton(text="📅 Мероприятия", callback_data='calendar_handler'))
+        menu.add(InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'))
+        menu.add(InlineKeyboardButton(text="📖 Мероприятия", callback_data='list_events'),
+                 InlineKeyboardButton(text="🗄️ Архив", callback_data='admin_archive'))
+        menu.add(InlineKeyboardButton(text="👥 Группы", callback_data='list-users'),
+                 InlineKeyboardButton(text="🏘️ Резиденты", callback_data='list-residents'))
+        menu.add(InlineKeyboardButton(text="📢 Сообщение резидентам", callback_data='notify-users'))
+        menu.add(InlineKeyboardButton(text="💰 Цена подписки", callback_data='subscribe-amount'))
+        await Menu.main.set()
+        await callback.message.edit_text(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
+    elif user:
+        menu = InlineKeyboardMarkup(row_width=1)
         menu.add(InlineKeyboardButton(text="🌟 Профиль", callback_data='profile'),
                  InlineKeyboardButton(text="📅 Календарь", callback_data='calendar_handler'),
                  InlineKeyboardButton(text="🏘️ Резиденты", callback_data='list-residents'))

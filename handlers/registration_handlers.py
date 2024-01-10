@@ -17,6 +17,7 @@ from modules.logger import send_log
 async def registration_send(message: types.Message, state: FSMContext):
     remove_keyboard = types.ReplyKeyboardRemove()
     wait_registration.add(message.from_user.id)
+    await message.delete_reply_markup()
     await message.reply("Ваша заявка на регистрацию успешно отправлена, ее рассмотрят в ближайшее время!", reply_markup=remove_keyboard)
 
     user = User(user_id=int(message.from_user.id),

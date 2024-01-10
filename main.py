@@ -77,6 +77,12 @@ async def start(message: types.Message):
     await main_handlers.start(message)
 
 
+@dp.message_handler(commands='payments', state='*')
+async def get_payment(message: types.Message, state: FSMContext):
+    if message.from_user.id in admins:
+        await handlers.subscribe_handlers.get_payments_from_user(message, state)
+
+
 #  РЕГИСТРАЦИЯ
 
 @dp.message_handler(content_types=types.ContentType.CONTACT, state=Registration.phone_number)
@@ -229,7 +235,7 @@ async def notify_users_send(message: types.Message, state: FSMContext):
     await admin_handlers.users_handlers.notify_users_send(message, state)
 #Пользователи
 
-@dp.callback_query_handler(lambda callback: 'notify-user' in callback.data, state=Menu)
+@dp.callback_query_handler(lambda callback: 'notify-user' in callback.data, state='*')
 async def notify_users(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.users_handlers.notify_user(callback, state)
 
@@ -522,7 +528,7 @@ async def event_edit_service_add_description(message: types.Message, state: FSMC
 
 @dp.message_handler(state=AdminEditEvent.event_new_service_price)
 async def event_edit_service_add_price(message: types.Message, state: FSMContext):
-    await admin_handlers.events_handlers.event_edit_service_price_set(message, state)
+    await admin_handlers.events_handlers.event_edit_service_add_price(message, state)
 
 
 @dp.callback_query_handler(lambda callback: 'event-edit-date' in callback.data, state='*')
@@ -676,5 +682,4 @@ if __name__ == '__main__':
     loop.create_task(loop_handler.spreader())
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)
 
-    #start_webhook(dispatcher=dp, webhook_path=WEBHOOK_PATH, on_startup=on_startup, on_shutdown=on_shutdown,
-                  #skip_updates=True, host=WEBAPP_HOST, port=WEBAPP_PORT)
+    #start_webhook(dispatcher=dp, webhook_path=WEBHOOK_PATH, on_startup=on_startup, on_shutdown=on_shutdown, skip_updates=True, host=WEBAPP_HOST, port=WEBAPP_PORT)

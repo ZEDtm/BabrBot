@@ -135,6 +135,7 @@ async def event_free_checkout(callback: types.CallbackQuery, state: FSMContext, 
 
     events.update_one({'_id': ObjectId(event_id)}, {'$set': {'users': [callback.from_user.id]}})
 
+    await callback.message.delete()
 
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")
 
@@ -239,7 +240,8 @@ async def payment_info(user_id: str, payment_id: str, admin: bool = False):
                  f"ID чека Yokassa:\n{payment['provider_payment_charge_id']}\n"
         await bot.send_message(user_id, check)
     else:
-        keyboard = InlineKeyboardMarkup(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
         await bot.send_message(user_id, check, reply_markup=keyboard)
 
 
@@ -264,3 +266,14 @@ async def subscribe_amount_set(message: types.Message, state: FSMContext):
     await send_log(f"Стоимость подписки: {subscribe_amount[0]} -> {message.text}")
     subscribe_amount.remove(subscribe_amount[0])
     subscribe_amount.append(int(message.text))
+
+
+async def get_payments_from_user(message: types.Message, state: FSMContext):
+    user_id = message.text.split()[1]
+    try:
+        payments_data = payments.find({'user_id': int(user_id)})
+        if payments_data:
+            for payment in payments_data:
+                await payment_info(message.from_user.id, payment['_id'], True)
+    except:
+        await message.answer('😖 Не найдено..')

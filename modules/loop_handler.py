@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from config import loop, bot, banned_users, wait_registration, admins
+from config import loop, bot, banned_users, wait_registration, admins, referral_link
 import asyncio
 
 from database.collection import archive, events, users
@@ -17,6 +17,8 @@ async def spreader():
         year, month, day, hour = datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour
         if datetime(year, month, day, 21, 0, 0) < datetime.now() < datetime(year, month, day, 21, 59, 59):
             loop.create_task(events_to_archive())
+            for link in referral_link:
+                referral_link.remove(link)
         if datetime(year, month, day, 8, 0, 0) < datetime.now() < datetime(year, month, day, 8, 59, 59):
             loop.create_task(check_subscribe())
             loop.create_task(notification())
@@ -38,7 +40,7 @@ async def notification():
             keyboard.add(InlineKeyboardButton(text=f"{event['name']}", callback_data=f"event_calendar:event:{date.year}:{date.month}:{date.day}:{str(event['_id'])}"))
             for user_id in event['users']:
                 try:
-                    await bot.send_message(user_id, f"До начала мероприятия [{event['name']}] неделя:", reply_markup=keyboard)
+                    await bot.send_message(user_id, f"🔔 Уважаемые участники мероприятия:\n{event['name']}\n\n⏱ До начала осталось неделя!", reply_markup=keyboard)
                 except:
                     pass
 
@@ -46,7 +48,7 @@ async def notification():
             keyboard.add(InlineKeyboardButton(text=f"{event['name']}", callback_data=f"event_calendar:event:{date.year}:{date.month}:{date.day}:{str(event['_id'])}"))
             for user_id in event['users']:
                 try:
-                    await bot.send_message(user_id, f"До начала мероприятия [{event['name']}] 3 дня:", reply_markup=keyboard)
+                    await bot.send_message(user_id, f"🔔 Уважаемые участники мероприятия:\n{event['name']}\n\n⏱ До начала осталась 3 дня!", reply_markup=keyboard)
                 except:
                     pass
 
@@ -54,7 +56,7 @@ async def notification():
             keyboard.add(InlineKeyboardButton(text=f"{event['name']}", callback_data=f"event_calendar:event:{date.year}:{date.month}:{date.day}:{str(event['_id'])}"))
             for user_id in event['users']:
                 try:
-                    await bot.send_message(user_id, f"Мероприятие [{event['name']}] начнется завтра, не пропустите!:", reply_markup=keyboard)
+                    await bot.send_message(user_id, f"🔔 Уважаемые участники мероприятия:\n{event['name']}\n\n🎉 Начало завтра, не пропустите!", reply_markup=keyboard)
                 except:
                     pass
 
@@ -99,9 +101,9 @@ async def check_subscribe(banned = False):
             if date_subscribe + timedelta(days=1) > datetime.now():
                 continue
             keyboard = InlineKeyboardMarkup()
-            keyboard.add(InlineKeyboardButton(text='Оформить подписку', callback_data=f"user-subscribe"))
+            keyboard.add(InlineKeyboardButton(text='🎫 Оформить подписку', callback_data=f"user-subscribe"))
             try:
-                await bot.send_message(user_id, 'Ваша подписка истекает. Оформите подписку:', reply_markup=keyboard)
+                await bot.send_message(user_id, '😔 Ваша подписка окончена\nПожалуйста, оформите подписку:', reply_markup=keyboard)
             except:
                 pass
 

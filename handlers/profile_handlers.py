@@ -1,12 +1,15 @@
 import logging
 import re
 
-from database.collection import find_user, update_full_name, update_company_name, update_company_site
+from config import bot, admins
+from database.collection import find_user, update_full_name, update_company_name, update_company_site, events
 from modules.bot_states import Menu, ProfileEdit
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+from modules.logger import send_log
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,18 +18,56 @@ async def profile_handler(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(Menu.profile)
     user = find_user(callback.from_user.id)
 
-    edit = InlineKeyboardMarkup()
-    button = InlineKeyboardButton(text='Редактировать анкету', callback_data='edit_profile')
-    back = InlineKeyboardButton(text='В меню', callback_data='menu')
-    edit.add(button)
-    edit.add(back)
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    keyboard.add(InlineKeyboardButton(text='📢 Обратная связь', callback_data='send-report'),
+                 InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
 
-    await callback.message.edit_text(f"📋 Ваша анкета:\n"
-                                     f"👨‍💼  ФИО: {user['full_name']}\n"
-                                     f"📞  Номер телефона: {user['phone_number']}\n"
-                                     f"🏢  Название компании: {user['company_name']}\n"
-                                     f"📰  Сайт компании: <a href='{user['company_site']}'>*перейти*</a>\n",
-                                     parse_mode='HTML', reply_markup=edit, disable_web_page_preview=True)
+    text = f"📋 Ваша анкета:\n\n" \
+           f"👤 ФИО: {user['full_name']}\n" \
+           f"📞 Номер телефона: {user['phone_number']}\n" \
+           f"🏢 Название компании: {user['company_name']}\n"
+    if user['company_site']:
+        text += f"📰  Сайт компании: <a href='{user['company_site']}'>*перейти*</a>\n"
+    text +=f"\n📋 Описание:\n {user['description']}\n"
+    events_data = events.find({'users': {'$in': [user['user_id']]}})
+    if events_data:
+        text += "\n👤 Вы участвуете в мероприятиях:\n"
+        for event in events_data:
+            text += f"- {event['name']}\n"
+
+    image_path = user['image']
+    if image_path:
+        await bot.send_photo(callback.from_user.id, photo=types.InputFile(image_path))
+    await callback.message.answer(text, parse_mode='HTML', reply_markup=keyboard, disable_web_page_preview=True)
+    await callback.message.delete()
+
+
+async def send_report(callback: types.CallbackQuery, state: FSMContext):
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
+                 InlineKeyboardButton(text='↩️ Назад', callback_data='profile'))
+    await callback.message.edit_text("✉️ Напишите сообщение для администрация:", reply_markup=keyboard)
+    await Menu.send_report.set()
+
+
+async def send_report_send(message: types.Message, state: FSMContext):
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
+                 InlineKeyboardButton(text='↩️ Назад', callback_data='profile'))
+    user = find_user(message.from_user.id)
+
+    keyboard_admin = InlineKeyboardMarkup()
+    keyboard_admin.add(InlineKeyboardButton(text='Ответить', callback_data=f"answer-report%{user['_id']}"))
+
+    for admin in admins:
+        try:
+            await bot.send_message(admin, f"Сообщение от пользователя {user['full_name']}\nНомер телефона: +{user['phone_number']}\n\n" + message.text, reply_markup=keyboard_admin)
+            await send_log(f"Пользователь[{user['_id']}] -> [Сообщение] <- {message.text}")
+        except:
+            pass
+
+    await message.answer("🗣️ Ваше сообщение отправлено администраторам, ожидайте ответ!", reply_markup=keyboard)
+    await Menu.main.set()
 
 
 async def edit_profile_handler(callback: types.CallbackQuery, state: FSMContext):

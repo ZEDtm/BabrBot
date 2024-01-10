@@ -8,8 +8,8 @@ from datetime import datetime
 from bson import ObjectId
 
 import handlers.main_handlers
-from config import LOG_CHAT, bot, wait_registration, admins, DIR, referral_link
-from database.collection import users
+from config import LOG_CHAT, bot, wait_registration, admins, DIR, referral_link, banned_users
+from database.collection import users, events
 from database.models import User
 from modules.bot_states import Registration, EditUser, Menu
 from modules.list_collection import ListUsers, ListAdmins, ListWaiting
@@ -70,6 +70,7 @@ async def list_waiting_select(callback: types.CallbackQuery, state: FSMContext):
 async def resident_info(callback: types.CallbackQuery, resident_id: str, current_page: int, state: FSMContext):
     user = users.find_one({'_id': ObjectId(resident_id)})
     keyboard = InlineKeyboardMarkup(row_width=1)
+    keyboard.add(InlineKeyboardButton(text='Отправить сообщение', callback_data=f"notify-user%{resident_id}"))
     keyboard.add(InlineKeyboardButton(text='Изменить ФИО', callback_data=f"edit-user-full_name%{resident_id}"))
     keyboard.add(InlineKeyboardButton(text='Изменить Номер', callback_data=f"edit-user-phone_number%{resident_id}"))
     keyboard.add(InlineKeyboardButton(text='Изменить Описание', callback_data=f"edit-user-description%{resident_id}"))
@@ -109,8 +110,6 @@ async def admin_info(callback: types.CallbackQuery, admin_id: str, current_page:
            f"Фамилия в телеграм: {user['telegram_last_name']}\n" \
            f"Тег: @{user['telegram_user_name']}\n" \
 
-    if image_path:
-        await bot.send_photo(callback.from_user.id, photo=types.InputFile(image_path), caption=text, parse_mode='HTML', reply_markup=keyboard)
     await callback.message.edit_text(text, parse_mode='HTML', reply_markup=keyboard, disable_web_page_preview=True)
 
 
@@ -314,7 +313,7 @@ async def delete_user(callback: types.CallbackQuery, state):
     async with state.proxy() as data:
         data['user_db_id'] = user
         keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
-                     InlineKeyboardButton(text='Назад', callback_data=f"rusers_list-y-{user}-0"))
+                     InlineKeyboardButton(text='Назад', callback_data=f"rusers_list-y-{user}-1"))
         user_id = users.find_one({'_id': ObjectId(user)})['user_id']
 
     await callback.message.edit_text(f"Напишите {user_id} для подтверждения:", reply_markup=keyboard)
@@ -327,11 +326,92 @@ async def delete_user_set(message: types.Message, state):
         keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
                      InlineKeyboardButton(text='Назад', callback_data=f"rusers_list-y-{data['user_db_id']}-1"))
         user = users.find_one({'_id': ObjectId(data['user_db_id'])})
-        if int(message.text) == user['user_id']:
+        if message.text == str(user['user_id']):
+            wait_registration.discard(int(message.text))
+            banned_users.discard(int(message.text))
+            if user['user_id'] in admins and user['description'] == 'АДМИНИСТРАТОР':
+                await message.answer('Администратор удален')
+            else:
+                admins.discard(int(message.text))
+                await message.answer('Администратор разжалован')
+                return
+            admins.discard(int(message.text))
             users.delete_one({'_id': ObjectId(data['user_db_id'])})
+            events.update_many({'users': {'$in': [user['user_id']]}}, {'$pull': {'users': user['user_id']}})
             await send_log(f"Администратор[{message.from_user.id}]: Пользователь[{data['user_db_id']}] -> Удалить")
         else:
-            pass
+            await message.edit_text(f"Отмена:", reply_markup=keyboard)
+            await state.finish()
+            return
         await state.finish()
     message.text = '/start'
     await handlers.main_handlers.start(message)
+
+
+async def notify_users(callback: types.CallbackQuery, state: FSMContext):
+    keyboard = InlineKeyboardMarkup(InlineKeyboardButton('В меню', callback_data='menu'))
+    await Menu.admin_notify.set()
+    await callback.message.edit_text('Пришлите текст для оповещения:', reply_markup=keyboard)
+
+
+async def notify_users_send(message: types.Message, state: FSMContext):
+    users_data = users.find()
+    send = 0
+    blocked = 0
+    for user in users_data:
+        if user['user_id'] in wait_registration or user['user_id']:
+            continue
+        try:
+            await bot.send_message(user['user_id'], f"📢 Сообщение от администратора:\n\n" + message.text)
+            send += 1
+        except:
+            blocked += 1
+    keyboard = InlineKeyboardMarkup(InlineKeyboardButton('В меню', callback_data='menu'))
+    await send_log(f"Пользователи -> [Рассылка] <- {message.text}")
+    await message.answer(f'Рассылка:\nОтправлено: {send}\nЗаблокировано:{blocked}', reply_markup=keyboard)
+
+
+async def notify_user(callback: types.CallbackQuery, state: FSMContext):
+    keyboard = InlineKeyboardMarkup(InlineKeyboardButton('В меню', callback_data='menu'))
+    await Menu.admin_notify_user.set()
+    async with state.proxy() as data:
+        data['user_id'] = int(callback.data.split(sep='%')[1])
+    await callback.message.edit_text('Пришлите текст для оповещения:', reply_markup=keyboard)
+
+
+async def notify_user_send(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        user_id = data['user_id']
+    send = 0
+    blocked = 0
+    try:
+        await bot.send_message(user_id, f"📢 Сообщение от администратора:\n\n" + message.text)
+        send += 1
+    except:
+        blocked += 1
+    keyboard = InlineKeyboardMarkup(InlineKeyboardButton('В меню', callback_data='menu'))
+    await send_log(f"Пользователь[{user_id}] -> [Рассылка] <- {message.text}")
+    await message.answer(f'Рассылка:\nОтправлено: {send}\nЗаблокировано:{blocked}', reply_markup=keyboard)
+
+
+async def answer_report(callback: types.CallbackQuery, state: FSMContext):
+    await Menu.answer_report.set()
+    async with state.proxy() as data:
+        data['user_db_id'] = callback.data.split(sep='%')[1]
+    await callback.message.edit_text(callback.message.text + '\n\nОтвет:')
+
+
+
+async def answer_report_send(message: types.Message, state: FSMContext):
+    keyboard = InlineKeyboardMarkup(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
+    async with state.proxy() as data:
+        user = users.find_one({'_id': ObjectId(data['user_db_id'])})
+
+    try:
+        await bot.send_message(user['user_id'], "📢 Сообщение от администратора:\n\n" + message.text)
+        await send_log(f"Администратор[{message.from_user.id}]:Пользователь[{user['_id']}] -> [Сообщение] <- {message.text}")
+    except:
+        await message.answer("Пользователь заблокировал бота", reply_markup=keyboard)
+
+    await message.answer("🗣️ Ваше сообщение отправлено!", reply_markup=keyboard)
+    await Menu.main.set()

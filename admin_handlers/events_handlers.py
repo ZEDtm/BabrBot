@@ -4,20 +4,17 @@ from datetime import datetime
 from bson import ObjectId
 
 from admin_handlers import archive_handlers
-from config import dp, bot
-from database.collection import events, archive, users
-from database.models import Event
-from modules.list_collection import ListEvents
-from modules.bot_states import AdminNewEvent, AdminEditEvent
+from config import bot
+from database.collection import events, archive, users, payments
+from modules.list_collection import ListEvents, ListUsersInEvent
+from modules.bot_states import AdminEditEvent, UsersInEvent
 from modules.bot_calendar_module import SelectDays, NewEventCalendar, SelectTime, AdminEventCalendar
-from aiogram import executor, types
+from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from handlers import main_handlers, registration_handlers, profile_handlers, calendar_handlers, residents_handlers
 from modules.logger import send_log
 
-logging.basicConfig(level=logging.INFO)
 
 
 async def list_events_public(callback: types.CallbackQuery, state: FSMContext):
@@ -37,29 +34,33 @@ async def admin_calendar(callback: types.CallbackQuery, state: FSMContext):
 
 
 async def admin_calendar_select(callback: types.CallbackQuery, state: FSMContext):
-    event, date, act_id = await AdminEventCalendar(events.find(), archive.find()).process_selection(callback, callback.data)
+    event, date, act_id = await AdminEventCalendar(events.find(), archive.find()).process_selection(callback,
+                                                                                                    callback.data)
     if act_id and event:
         await event_handle(callback, state, act_id, date=date)
     elif act_id:
         await archive_handlers.archive_handle(callback, state, archive_id=act_id, date=date)
 
 
-async def event_handle(callback: types.CallbackQuery, state: FSMContext, event_id: str, current_page: int = None, date: dict = None):
+async def event_handle(callback: types.CallbackQuery, state: FSMContext, event_id: str, current_page: int = None,
+                       date: dict = None):
     event = events.find_one({'_id': ObjectId(event_id)})
     keyboard = InlineKeyboardMarkup(row_width=1)
     if event['public']:
-        keyboard.add(InlineKeyboardButton(text='Отменить', callback_data=f"public-event-{event_id}"))
+        keyboard.add(InlineKeyboardButton(text='Отменить', callback_data=f"cancel-event%{event_id}"))
     else:
         keyboard.add(InlineKeyboardButton(text='Подтвердить и оповестить', callback_data=f"public-event%{event_id}"))
     keyboard.add(InlineKeyboardButton(text='Изменить название', callback_data=f"event-edit-name%{event_id}"),
                  InlineKeyboardButton(text='Изменить описание', callback_data=f"event-edit-description%{event_id}"),
                  InlineKeyboardButton(text='Изменить стоимость', callback_data=f"event-edit-price%{event_id}"),
                  InlineKeyboardButton(text='Изменить услуги', callback_data=f"event-edit-services%{event_id}"),
-                 InlineKeyboardButton(text='Изменить дату и длительность', callback_data=f"event-edit-date%{event_id}"))
+                 InlineKeyboardButton(text='Изменить время, дату, длительность', callback_data=f"event-edit-date%{event_id}"),
+                 InlineKeyboardButton(text='Участники', callback_data=f"event-users%{event_id}"))
     if current_page:
         keyboard.add(InlineKeyboardButton(text='Назад', callback_data=f"events_list-n-{current_page}"))
     if date:
-        keyboard.add(InlineKeyboardButton(text='Назад', callback_data=f"admin_event_calendar:CURRENT:{date['year']}:{date['month']}:{date['day']}"))
+        keyboard.add(InlineKeyboardButton(text='Назад',
+                                          callback_data=f"admin_event_calendar:CURRENT:{date['year']}:{date['month']}:{date['day']}"))
     if not event['public']:
         keyboard.add(InlineKeyboardButton(text='В черновик', callback_data=f"menu"))
 
@@ -86,17 +87,35 @@ async def publication_event(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.edit_text(f"Рассылка:\nУспешно: {count_send}\nЗаблокировано: {count_blocked}")
         try:
             keyboard = InlineKeyboardMarkup()
-            keyboard.add(InlineKeyboardButton(text='👥 Посмотреть', callback_data=f"event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
-            await bot.send_message(user['user_id'], f"🎉 Вы готовы к участию в новом мероприятии - {event['name']}?\n👇 Присоединитесь!", reply_markup=keyboard)
+            keyboard.add(InlineKeyboardButton(text='👥 Посмотреть',
+                                              callback_data=f"event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
+            await bot.send_message(user['user_id'],
+                                   f"🎉 Вы готовы к участию в новом мероприятии - {event['name']}?\n👇 Присоединитесь!",
+                                   reply_markup=keyboard)
             count_send += 1
         except:
             count_blocked += 1
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
-                 InlineKeyboardButton(text='Назад', callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
+                 InlineKeyboardButton(text='Назад',
+                                      callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
     await callback.message.edit_reply_markup(reply_markup=keyboard)
 
     await send_log(f"Черновик[{event['name']}] -> Мероприятия")
+
+
+async def event_cancel(callback: types.CallbackQuery, state: FSMContext):
+    event_id = callback.data.split(sep='%')[1]
+    event = events.find_one(ObjectId(event_id))
+    events.update_one(event, {'$set': {'public': False}})
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text='Посмотреть оплаты', callback_data=f'event-payments-check%{event_id}'))
+    keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
+                 InlineKeyboardButton(text='Назад', callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
+    await callback.message.edit_text('Мероприятие отменено, можете оповестить участников Мероприятие -> Участники -> Оповестить:', reply_markup=keyboard)
+
+    await send_log(f"Мероприятие[{event['name']}] -> Черновик")
 
 
 async def event_edit_name(callback: types.CallbackQuery, state: FSMContext):
@@ -110,7 +129,8 @@ async def event_edit_name(callback: types.CallbackQuery, state: FSMContext):
 
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
-                 InlineKeyboardButton('Назад', callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
+                 InlineKeyboardButton('Назад',
+                                      callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
 
     await callback.message.edit_text(f"Мероприятие {event['name']}\n\nВведите новое название:", reply_markup=keyboard)
 
@@ -138,9 +158,11 @@ async def event_edit_description(callback: types.CallbackQuery, state: FSMContex
 
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
-                 InlineKeyboardButton('Назад', callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
+                 InlineKeyboardButton('Назад',
+                                      callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
 
-    await callback.message.edit_text(f"Описание\n {event['description']}\n\nВведите новое описание:", reply_markup=keyboard)
+    await callback.message.edit_text(f"Описание\n {event['description']}\n\nВведите новое описание:",
+                                     reply_markup=keyboard)
 
 
 async def event_edit_description_set(message: types.Message, state: FSMContext):
@@ -166,9 +188,12 @@ async def event_edit_price(callback: types.CallbackQuery, state: FSMContext):
 
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
-                 InlineKeyboardButton('Назад', callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
+                 InlineKeyboardButton('Назад',
+                                      callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
 
-    await callback.message.edit_text(f"Стоимость\n {event['price']}\n\nВведите новую стоимость в рублях (без дополнительных услуг):", reply_markup=keyboard)
+    await callback.message.edit_text(
+        f"Стоимость\n {event['price']}\n\nВведите новую стоимость в рублях (без дополнительных услуг):",
+        reply_markup=keyboard)
 
 
 async def event_edit_price_set(message: types.Message, state: FSMContext):
@@ -196,10 +221,12 @@ async def event_edit_services(callback: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
         data['callback_data'] = f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"
         for service, price in zip(event['service_description'], event['service_price']):
-            keyboard.add(InlineKeyboardButton(text=f"{service}: {price}", callback_data=f"event-edit-service%{event_id}%{event['service_description'].index(service)}"))
+            keyboard.add(InlineKeyboardButton(text=f"{service}: {price}",
+                                              callback_data=f"event-edit-service%{event_id}%{event['service_description'].index(service)}"))
 
     keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
-                 InlineKeyboardButton('Назад', callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
+                 InlineKeyboardButton('Назад',
+                                      callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
 
     await callback.message.edit_text(f"Выберите действие:", reply_markup=keyboard)
 
@@ -224,10 +251,12 @@ async def event_edit_service_description_set(message: types.Message, state: FSMC
     keyboard = InlineKeyboardMarkup()
     async with state.proxy() as data:
         keyboard.add(
-            InlineKeyboardButton(text='Удалить', callback_data=f"event-delete-service%{data['event_id']}%{data['service_index']}"))
+            InlineKeyboardButton(text='Удалить',
+                                 callback_data=f"event-delete-service%{data['event_id']}%{data['service_index']}"))
         keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
                      InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
-        events.update_one({'_id': ObjectId(data['event_id'])}, {'$set': {f'service_description.{data["service_index"]}': message.text}})
+        events.update_one({'_id': ObjectId(data['event_id'])},
+                          {'$set': {f'service_description.{data["service_index"]}': message.text}})
         await send_log(f"Мероприятие[{data['event_id']}]: Изменение услуги описание <- {message.text}")
     await AdminEditEvent.event_service_price.set()
     await message.answer('Введите новую стоимость услуги:', reply_markup=keyboard)
@@ -236,14 +265,16 @@ async def event_edit_service_description_set(message: types.Message, state: FSMC
 async def event_edit_service_price_set(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup()
     async with state.proxy() as data:
-        keyboard.add(InlineKeyboardButton(text='Удалить', callback_data=f"event-delete-service%{data['event_id']}%{data['service_index']}"))
+        keyboard.add(InlineKeyboardButton(text='Удалить',
+                                          callback_data=f"event-delete-service%{data['event_id']}%{data['service_index']}"))
         keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
                      InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
         if not re.match(r'^\d+$', message.text):
             await AdminEditEvent.event_service_price.set()
             await message.answer('Введите новую стоимость услуги:', reply_markup=keyboard)
             return
-        events.update_one({'_id': ObjectId(data['event_id'])}, {'$set': {f'service_price.{data["service_index"]}': message.text}})
+        events.update_one({'_id': ObjectId(data['event_id'])},
+                          {'$set': {f'service_price.{data["service_index"]}': message.text}})
         await send_log(f"Мероприятие[{data['event_id']}]: Изменение услуги стоимость <- {message.text}")
     await message.answer('Услуга изменена', reply_markup=keyboard)
 
@@ -278,7 +309,8 @@ async def event_edit_service_add_price(message: types.Message, state: FSMContext
             await AdminEditEvent.event_new_service_price.set()
             await message.answer('Введите стоимость услуги:', reply_markup=keyboard)
             return
-        events.update_one({'_id': ObjectId(data['event_id'])}, {'$push': {'service_description': data['service_description']}})
+        events.update_one({'_id': ObjectId(data['event_id'])},
+                          {'$push': {'service_description': data['service_description']}})
         events.update_one({'_id': ObjectId(data['event_id'])}, {'$push': {'service_price': message.text}})
 
         await send_log(f"Мероприятие[{data['event_id']}]: Услуги <- {data['service_description']}")
@@ -293,7 +325,157 @@ async def event_edit_service_delete(callback: types.CallbackQuery, state: FSMCon
     async with state.proxy() as data:
         keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
                      InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
-    events.update_one({'_id': ObjectId(event_id)}, {'$pull': {'service_description': event['service_description'][int(service_index)]}})
-    events.update_one({'_id': ObjectId(event_id)}, {'$pull': {'service_price': event['service_price'][int(service_index)]}})
+    events.update_one({'_id': ObjectId(event_id)},
+                      {'$pull': {'service_description': event['service_description'][int(service_index)]}})
+    events.update_one({'_id': ObjectId(event_id)},
+                      {'$pull': {'service_price': event['service_price'][int(service_index)]}})
     await send_log(f"Мероприятие[{event_id}]: Услуга[{event['service_description'][int(service_index)]}] -> Удалена")
     await callback.message.edit_text('Услуга удалена', reply_markup=keyboard)
+
+
+async def event_edit_time(callback: types.CallbackQuery, state: FSMContext):
+    event_id = callback.data.split(sep='%')[1]
+    event = events.find_one(ObjectId(event_id))
+
+    await AdminEditEvent.event_date.set()
+    async with state.proxy() as data:
+        data['event_id'] = event_id
+        data['callback_data'] = f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"
+
+        keyboard = await SelectTime().start_time(event['hour'], event['minute'])
+        keyboard.add(InlineKeyboardButton('Меню', callback_data='menu'),
+                     InlineKeyboardButton('Назад',
+                                          callback_data=f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"))
+    await callback.message.edit_text('Установите время', reply_markup=keyboard)
+
+
+async def event_edit_duration(callback: types.CallbackQuery, state: FSMContext):
+    select, time = await SelectTime().process_selection(callback, callback.data)
+    if select:
+        async with state.proxy() as data:
+            event = events.find_one(ObjectId(data['event_id']))
+            keyboard = await SelectDays().start_days(day=event['duration'], edit=True)
+            keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
+                         InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
+        events.update_one(event, {'$set': {'hour': time['hour'], 'minute': time['minute']}})
+
+        await callback.message.edit_text('Установите длительность', reply_markup=keyboard)
+
+        await send_log(f"Мероприятие[{event['name']}]: Время <- {time['hour']}:{time['minute']}")
+
+
+async def event_edit_date(callback: types.CallbackQuery, state: FSMContext):
+    select, day = await SelectDays().process_selection(callback, callback.data)
+    if select:
+        async with state.proxy() as data:
+            event = events.find_one(ObjectId(data['event_id']))
+            keyboard = await NewEventCalendar(events.find()).start_calendar()
+            keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
+                         InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
+
+        events.update_one(event, {'$set': {'duration': day}})
+
+        await callback.message.edit_text('Установите дату', reply_markup=keyboard)
+
+        await send_log(f"Мероприятие[{event['name']}]: Длительность <- {day}")
+
+
+async def event_edit_date_set(callback: types.CallbackQuery, state: FSMContext):
+    select, date = await NewEventCalendar(events.find()).process_selection(callback, callback.data)
+    if select:
+        async with state.proxy() as data:
+            event = events.find_one(ObjectId(data['event_id']))
+            keyboard = InlineKeyboardMarkup()
+            keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
+                         InlineKeyboardButton(text='Назад', callback_data=data['callback_data']))
+
+        events.update_one(event, {'$set': {'year': date['year'], 'month': date['month'], 'day': date['day']}})
+
+        await callback.message.edit_text('Дата изменена', reply_markup=keyboard)
+
+        await send_log(f"Мероприятие[{event['name']}]: Дата <- {date['day']}.{date['month']}.{date['year']}")
+
+
+async def event_users(callback: types.CallbackQuery, state: FSMContext):
+    event_id = callback.data.split(sep='%')[1]
+    event = events.find_one({'_id': ObjectId(event_id)})
+    users_data = []
+    for user_id in event['users']:
+        users_data.append(users.find_one({'user_id': user_id}))
+    callback_data = f"admin_event_calendar:event:{event['year']}:{event['month']}:{event['day']}:{event_id}"
+    keyboard = await ListUsersInEvent().start_collection(users_data, callback_data)
+    await UsersInEvent.list.set()
+    async with state.proxy() as data:
+        data['callback_data'] = callback_data
+        data['event_id'] = event_id
+    await callback.message.edit_text('Пользователи, подписанные на мероприятие:', reply_markup=keyboard)
+
+
+async def event_users_select(callback: types.CallbackQuery, state: FSMContext):
+    async with state.proxy() as data:
+        event_id = data['event_id']
+        callback_data = data['callback_data']
+        event = events.find_one({'_id': ObjectId(event_id)})
+        users_data = []
+        for user in event['users']:
+            users_data.append(users.find_one({'user_id': user}))
+    select, user_db_id, current_page = await ListUsersInEvent().processing_selection(callback, callback.data, users_data, callback_data)
+    if select:
+        await event_user_select(callback, state, user_db_id, current_page)
+
+
+async def event_user_select(callback: types.CallbackQuery, state: FSMContext, user_db_id, current_page):
+    async with state.proxy() as data:
+        event_id = data['event_id']
+    user = users.find_one({'_id': ObjectId(user_db_id)})
+    payment = payments.find_one({'user_id': user['user_id'], 'binding': event_id})
+    text = f"Пользователь: {user['full_name']}\n" \
+           f"Выбранные услуги:\n"
+    for info in payment['info']:
+        text += f"- {info['label']}: {info['amount']}"
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text='Открепить', callback_data=f"user-del-event%{user['user_id']}%{event_id}%{current_page}"))
+    keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
+                 InlineKeyboardButton(text='Назад', callback_data=f'event_users-n-{current_page}'))
+    await callback.message.edit_text(text, reply_markup=keyboard)
+
+
+async def user_del_event(callback: types.CallbackQuery, state: FSMContext):
+    user_id = int(callback.data.split(sep='%')[1])
+    event_id = callback.data.split(sep='%')[2]
+    current_page = callback.data.split(sep='%')[3]
+    payments.delete_one({'user_id': user_id, 'binding': event_id})
+    events.update_one({'_id': ObjectId(event_id)}, {'$pull': {'users': user_id}})
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text='В меню', callback_data='menu'),
+                 InlineKeyboardButton(text='Назад', callback_data=f"event_users-n-{current_page}"))
+
+    await callback.message.edit_text('Пользователь откреплен', reply_markup=keyboard)
+    await send_log(f"Мероприятие[{event_id}]:Пользователь[{user_id}] -> Открепить")
+
+
+async def notify_users(callback: types.CallbackQuery, state: FSMContext):
+    async with state.proxy() as data:
+        data['event_id'] = callback.data.split(sep='%')[1]
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(InlineKeyboardButton('В меню', callback_data='menu'),
+                     InlineKeyboardButton('Назад', callback_data=data['callback_data']))
+    await callback.message.edit_text('Напишите сообщение для пользователей:', reply_markup=keyboard)
+
+
+async def notify_users_send(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        event = events.find_one({'_id': ObjectId(data['event_id'])})
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(InlineKeyboardButton('В меню', callback_data='menu'),
+                     InlineKeyboardButton('Назад', callback_data=data['callback_data']))
+    send = 0
+    blocked = 0
+    for user in event['users']:
+        try:
+            await bot.send_message(user, f"📢 Уважаемые участники мероприятия!\n {event['name']}\n\n" + message.text)
+            send += 1
+        except:
+            blocked += 1
+    await send_log(f"Мероприятие[{event['name']}]:Пользователи -> [Рассылка] <- {message.text}")
+    await message.answer(f'Рассылка:\nОтправлено: {send}\nЗаблокировано:{blocked}', reply_markup=keyboard)

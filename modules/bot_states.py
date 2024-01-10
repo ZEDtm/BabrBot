@@ -7,6 +7,11 @@ class Menu(StatesGroup):
     profile = State()
     calendar = State()
     archive = State()
+    admin_notify = State()
+    admin_notify_user = State()
+    admin_amount = State()
+    send_report = State()
+    answer_report = State()
 
 
 class ProfileEdit(StatesGroup):
@@ -59,7 +64,7 @@ class AdminEditEvent(StatesGroup):
     event_new_service_description = State()
     event_new_service_price = State()
     event_add = State()
-    event_long = State()
+    event_date = State()
     event_duration = State()
 
 
@@ -68,3 +73,7 @@ class AdminArchive(StatesGroup):
     add_images = State()
     add_video = State()
     add_link = State()
+
+
+class UsersInEvent(StatesGroup):
+    list = State()

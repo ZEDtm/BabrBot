@@ -90,30 +90,34 @@ class EventCalendar:
                 elif day in users_events:
                     i = users_events.index(day)
                     inline_kb.insert(InlineKeyboardButton(
-                        str(day) + '🟢', callback_data=event_calendar_callback.new("event", year, month, day, users_events_id[i])
+                        str(day) + '🟢',
+                        callback_data=event_calendar_callback.new("event", year, month, day, users_events_id[i])
                     ))
                     continue
                 elif day in current_events:
                     i = current_events.index(day)
                     inline_kb.insert(InlineKeyboardButton(
-                        str(day) + '🟡', callback_data=event_calendar_callback.new("event", year, month, day, current_events_id[i])
+                        str(day) + '🟡',
+                        callback_data=event_calendar_callback.new("event", year, month, day, current_events_id[i])
                     ))
                     continue
 
                 elif day in user_archive:
                     i = user_archive.index(day)
                     inline_kb.insert(InlineKeyboardButton(
-                        str(day)+'🟠', callback_data=event_calendar_callback.new("archive", year, month, day, user_archive_id[i])
+                        str(day) + '🟠',
+                        callback_data=event_calendar_callback.new("archive", year, month, day, user_archive_id[i])
                     ))
                     continue
                 elif day in archive_data:
                     i = archive_data.index(day)
                     inline_kb.insert(InlineKeyboardButton(
-                        str(day)+'🔴', callback_data=event_calendar_callback.new("archive", year, month, day, archive_id[i])
+                        str(day) + '🔴',
+                        callback_data=event_calendar_callback.new("archive", year, month, day, archive_id[i])
                     ))
                     continue
 
-                inline_kb.insert(InlineKeyboardButton(str(day)+' ', callback_data=ignore_callback))
+                inline_kb.insert(InlineKeyboardButton(str(day) + ' ', callback_data=ignore_callback))
 
         # Last row - Buttons
         inline_kb.row()
@@ -247,15 +251,24 @@ class AdminEventCalendar:
                     continue
                 if day in current_events_public:
                     i = current_events_public.index(day)
-                    inline_kb.insert(InlineKeyboardButton(str(day)+'🟢', callback_data=admin_event_calendar_callback.new("event", year, month, day)+f':{events_id[i]}'))
+                    inline_kb.insert(InlineKeyboardButton(str(day) + '🟢',
+                                                          callback_data=admin_event_calendar_callback.new("event", year,
+                                                                                                          month,
+                                                                                                          day) + f':{events_id[i]}'))
                     continue
                 if day in current_events_no_public:
                     i = current_events_no_public.index(day)
-                    inline_kb.insert(InlineKeyboardButton(str(day)+'🟡', callback_data=admin_event_calendar_callback.new("event", year, month, day)+f':{events_id[i]}'))
+                    inline_kb.insert(InlineKeyboardButton(str(day) + '🟡',
+                                                          callback_data=admin_event_calendar_callback.new("event", year,
+                                                                                                          month,
+                                                                                                          day) + f':{events_id[i]}'))
                     continue
                 if day in archive_data:
                     i = archive_data.index(day)
-                    inline_kb.insert(InlineKeyboardButton(str(day) + '🔴', callback_data=admin_event_calendar_callback.new("archive", year, month, day) + f':{archive_id[i]}'))
+                    inline_kb.insert(InlineKeyboardButton(str(day) + '🔴',
+                                                          callback_data=admin_event_calendar_callback.new("archive",
+                                                                                                          year, month,
+                                                                                                          day) + f':{archive_id[i]}'))
                     continue
                 inline_kb.insert(InlineKeyboardButton(str(day), callback_data=ignore_callback))
 
@@ -560,29 +573,38 @@ class NewEventCalendar:
 
 
 class SelectDays:
-    async def start_days(self, day: int = 2):
+
+    async def start_days(self, day: int = 2, edit: bool = False):
         keyboard = InlineKeyboardMarkup()
-        if day == 2:
+        if day == 1:
             keyboard.add(InlineKeyboardButton(text=f'{day} дня', callback_data=f'start_days-y-{day}'),
                          InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day + 1}'))
+        elif day == 2:
+            if edit:
+                keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day - 1}'),
+                             InlineKeyboardButton(text=f'{day} дня', callback_data=f'start_days-y-{day}'),
+                             InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day + 1}'))
+            else:
+                keyboard.add(InlineKeyboardButton(text=f'{day} дня', callback_data=f'start_days-y-{day}'),
+                             InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day + 1}'))
         elif 2 < day < 5:
-            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day-1}'),
+            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day - 1}'),
                          InlineKeyboardButton(text=f'{day} дня', callback_data=f'start_days-y-{day}'),
-                         InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day+1}'))
+                         InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day + 1}'))
         elif day == 21:
-            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day-1}'),
+            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day - 1}'),
                          InlineKeyboardButton(text=f'{day} день', callback_data=f'start_days-y-{day}'),
-                         InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day+1}'))
+                         InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day + 1}'))
         elif 21 < day < 25:
-            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day-1}'),
+            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day - 1}'),
                          InlineKeyboardButton(text=f'{day} дня', callback_data=f'start_days-y-{day}'),
-                         InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day+1}'))
+                         InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day + 1}'))
         elif 4 < day < 31:
-            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day-1}'),
+            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day - 1}'),
                          InlineKeyboardButton(text=f'{day} дней', callback_data=f'start_days-y-{day}'),
-                         InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day+1}'))
+                         InlineKeyboardButton(text='>', callback_data=f'start_days-n-{day + 1}'))
         elif day == 31:
-            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day-1}'),
+            keyboard.add(InlineKeyboardButton(text='<', callback_data=f'start_days-n-{day - 1}'),
                          InlineKeyboardButton(text=f'{day} день', callback_data=f'start_days-y-{day}'))
         return keyboard
 
@@ -608,20 +630,20 @@ class SelectTime:
                          InlineKeyboardButton(text='>', callback_data=f'select_time-n-{hour + 1}-{minute}'))
         elif hour == 23:
             keyboard.add(InlineKeyboardButton(text='<', callback_data=f'select_time-n-{hour - 1}-{minute}'),
-                         InlineKeyboardButton(text=f'{hour} ч',  callback_data=f'select_time-i-{hour}-{minute}'),
-                         InlineKeyboardButton(text=' ',  callback_data=f'select_time-i-{hour}-{minute}'))
+                         InlineKeyboardButton(text=f'{hour} ч', callback_data=f'select_time-i-{hour}-{minute}'),
+                         InlineKeyboardButton(text=' ', callback_data=f'select_time-i-{hour}-{minute}'))
         else:
             keyboard.add(InlineKeyboardButton(text='<', callback_data=f'select_time-n-{hour - 1}-{minute}'),
-                         InlineKeyboardButton(text=f'{hour} ч',  callback_data=f'select_time-i-{hour}-{minute}'),
+                         InlineKeyboardButton(text=f'{hour} ч', callback_data=f'select_time-i-{hour}-{minute}'),
                          InlineKeyboardButton(text='>', callback_data=f'select_time-n-{hour + 1}-{minute}'))
         if minute == 0:
-            keyboard.add(InlineKeyboardButton(text=' ',  callback_data=f'select_time-i-{hour}-{minute}'),
-                         InlineKeyboardButton(text=f'{minute} м',  callback_data=f'select_time-i-{hour}-{minute}'),
+            keyboard.add(InlineKeyboardButton(text=' ', callback_data=f'select_time-i-{hour}-{minute}'),
+                         InlineKeyboardButton(text=f'{minute} м', callback_data=f'select_time-i-{hour}-{minute}'),
                          InlineKeyboardButton(text='>', callback_data=f'select_time-n-{hour}-{minute + 5}'))
         elif minute == 55:
             keyboard.add(InlineKeyboardButton(text='<', callback_data=f'select_time-n-{hour}-{minute - 5}'),
-                         InlineKeyboardButton(text=f'{minute} м',  callback_data=f'select_time-i-{hour}-{minute}'),
-                         InlineKeyboardButton(text=' ',  callback_data=f'select_time-i-{hour}-{minute}'))
+                         InlineKeyboardButton(text=f'{minute} м', callback_data=f'select_time-i-{hour}-{minute}'),
+                         InlineKeyboardButton(text=' ', callback_data=f'select_time-i-{hour}-{minute}'))
         else:
             keyboard.add(InlineKeyboardButton(text='<', callback_data=f'select_time-n-{hour}-{minute - 5}'),
                          InlineKeyboardButton(text=f'{minute} м', callback_data=f'select_time-i-{hour}-{minute}'),

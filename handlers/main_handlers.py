@@ -19,21 +19,19 @@ async def start(message: types.Message):
         if message.text.split()[1] in referral_link:
             admins.add(message.from_user.id)
             referral_link.discard(message.text.split()[1])
-        await send_log(f"Пользователь[{message.from_user.id}] -> Администратор")
+            await send_log(f"Пользователь[{message.from_user.id}] -> Администратор")
 
     menu = InlineKeyboardMarkup(row_width=1)
     user = find_user(message.from_user.id)
     if message.from_user.id in admins:
+        if not user:
+            await registration_admin(message, message.from_user.id)
         menu.add(InlineKeyboardButton(text="📅 Календарь мероприятий", callback_data='admin_calendar'),
                  InlineKeyboardButton(text="👥 Пользователи", callback_data='list-users'),
                  InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'),
                  InlineKeyboardButton(text="📖 Список мероприятий", callback_data='list_events'),
                  InlineKeyboardButton(text="🗄️ Архив", callback_data='admin_archive'),
                  InlineKeyboardButton(text="Установить стоимость подписки", callback_data='subscribe-amount'))
-
-        if not user:
-            await registration_admin(message, message.from_user.id)
-
     if user:
 
         menu.add(InlineKeyboardButton(text="🌟 Профиль", callback_data='profile'),
@@ -64,6 +62,7 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
                  InlineKeyboardButton(text="➕ Добавить мероприятие", callback_data='new_event'),
                  InlineKeyboardButton(text="📖 Список мероприятий", callback_data='list_events'),
                  InlineKeyboardButton(text="🗄️ Архив", callback_data='admin_archive'),
+                 InlineKeyboardButton(text="Оповещение для резидентов", callback_data='notify-users'),
                  InlineKeyboardButton(text="Установить стоимость подписки", callback_data='subscribe-amount'))
 
         await Menu.main.set()
@@ -78,8 +77,7 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
 
         await Menu.main.set()
 
-        await callback.message.answer(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
-        await callback.message.delete()
+        await callback.message.edit_text(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
 
 
 async def registration_admin(message, user_id):

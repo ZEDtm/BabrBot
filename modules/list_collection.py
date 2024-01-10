@@ -94,17 +94,17 @@ class ListResidents:
             name = collection[i]['full_name'].split()
             full_name = f"{name[0]} {name[1][0]}.{name[2][0]}"
 
-            keyboard.add(InlineKeyboardButton(text=f"{full_name}", callback_data=f"residents_list-y-{str(collection[i]['_id'])}-{current_page}"))
+            keyboard.add(InlineKeyboardButton(text=f"🏢 {collection[i]['full_name']} 👤 {full_name}", callback_data=f"residents_list-y-{str(collection[i]['_id'])}-{current_page}"))
         if current_page > 1 and start_with < lenght:
-            keyboard.add(InlineKeyboardButton(text="<", callback_data=f'residents_list-n-{current_page - 1}'),
-                         InlineKeyboardButton(text=">", callback_data=f'residents_list-n-{current_page + 1}'))
+            keyboard.add(InlineKeyboardButton(text="⬅️", callback_data=f'residents_list-n-{current_page - 1}'),
+                         InlineKeyboardButton(text="➡", callback_data=f'residents_list-n-{current_page + 1}'))
         elif start_with < lenght:
             keyboard.add(InlineKeyboardButton(text=" ", callback_data=f'residents_list-i-{current_page}'),
-                         InlineKeyboardButton(text=">", callback_data=f'residents_list-n-{current_page + 1}'))
+                         InlineKeyboardButton(text="➡", callback_data=f'residents_list-n-{current_page + 1}'))
         elif current_page > 1:
-            keyboard.add(InlineKeyboardButton(text="<", callback_data=f'residents_list-n-{current_page - 1}'),
+            keyboard.add(InlineKeyboardButton(text="⬅️", callback_data=f'residents_list-n-{current_page - 1}'),
                          InlineKeyboardButton(text=" ", callback_data=f'residents_list-i-{current_page}'))
-        keyboard.add(InlineKeyboardButton(text="В меню", callback_data='menu'))
+        keyboard.add(InlineKeyboardButton(text="🏠 В меню", callback_data='menu'))
 
         return keyboard
 
@@ -114,7 +114,7 @@ class ListResidents:
         if select == 'i':
             await callback.answer(cache_time=60)
         elif select == 'n':
-            await callback.message.edit_text('Резиденты:', reply_markup=await self.start_collection(collection_data, int(callback_data.split(sep='-')[2])))
+            await callback.message.edit_text('👥 Список резидентов:', reply_markup=await self.start_collection(collection_data, int(callback_data.split(sep='-')[2])))
         elif select == 'y':
             return_data = True, callback_data.split(sep='-')[2], int(callback_data.split(sep='-')[3])
         return return_data
@@ -127,7 +127,6 @@ class ListUsers:
             if item['user_id'] in wait_registration or item['user_id'] in admins:
                 continue
             collection.append(item)
-            print(collection)
         keyboard = InlineKeyboardMarkup()
         start_with = current_page * 10
         lenght = len(collection)
@@ -232,6 +231,42 @@ class ListWaiting:
             await callback.answer(cache_time=60)
         elif select == 'n':
             await callback.message.edit_text(text='Заявки', reply_markup=await self.start_collection(collection_data, int(callback_data.split(sep='-')[2])))
+        elif select == 'y':
+            return_data = True, callback_data.split(sep='-')[2], int(callback_data.split(sep='-')[3])
+        return return_data
+
+
+class ListUsersInEvent:
+    async def start_collection(self, collection, callback_data, current_page: int = 1):
+        keyboard = InlineKeyboardMarkup()
+        start_with = current_page * 10
+        lenght = len(collection)
+        for i in range(start_with - 10, min(start_with, lenght)):
+            keyboard.add(InlineKeyboardButton(text=f"{collection[i]['full_name']}", callback_data=f"event_users-y-{str(collection[i]['_id'])}-{current_page}"))
+        if current_page > 1 and start_with < lenght:
+            keyboard.add(InlineKeyboardButton(text="<", callback_data=f'event_users-n-{current_page - 1}'),
+                         InlineKeyboardButton(text=">", callback_data=f'event_users-n-{current_page + 1}'))
+        elif start_with < lenght:
+            keyboard.add(InlineKeyboardButton(text=" ", callback_data=f'event_users-i-{current_page}'),
+                         InlineKeyboardButton(text=">", callback_data=f'event_users-n-{current_page + 1}'))
+        elif current_page > 1:
+            keyboard.add(InlineKeyboardButton(text="<", callback_data=f'event_users-n-{current_page - 1}'),
+                         InlineKeyboardButton(text=" ", callback_data=f'event_users-i-{current_page}'))
+        event_id = callback_data.split(sep=':')[5]
+        keyboard.add(InlineKeyboardButton(text="Оповестить участников", callback_data=f'notify-users%{event_id}'))
+        keyboard.add(InlineKeyboardButton(text="В меню", callback_data='menu'),
+                     InlineKeyboardButton(text='Назад', callback_data=callback_data))
+
+        return keyboard
+
+    async def processing_selection(self, callback: CallbackQuery, callback_data, collection_data, call):
+        select = callback_data.split(sep='-')[1]
+        return_data = (False, None, None)
+        if select == 'i':
+            await callback.answer(cache_time=60)
+        elif select == 'n':
+            await callback.message.edit_text(text='Резиденты', reply_markup=await self.start_collection(collection_data, call, int(callback_data.split(sep='-')[2])))
+
         elif select == 'y':
             return_data = True, callback_data.split(sep='-')[2], int(callback_data.split(sep='-')[3])
         return return_data

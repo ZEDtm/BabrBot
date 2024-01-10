@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from datetime import datetime, timedelta
 from os import path, listdir
 
@@ -7,7 +8,7 @@ import handlers.main_handlers
 from database.collection import events, find_event, archive, payments, users
 from database.models import Payment
 from modules.bot_states import Menu, EventSubscribe
-from config import DIR, bot, LOG_CHAT, YOUKASSA, banned_users, SUBSCRIBE_AMOUNT
+from config import DIR, bot, LOG_CHAT, YOUKASSA, banned_users, subscribe_amount
 from bson import ObjectId
 
 from aiogram import types
@@ -105,7 +106,6 @@ async def event_payment_receipt(callback: types.CallbackQuery, state: FSMContext
                                    prices=prices)
         else:
             await event_free_checkout(callback, state, data['event_id'], services, amount)
-        await callback.message.delete()
 
 
 async def event_free_checkout(callback: types.CallbackQuery, state: FSMContext, event_id, services, amount):
@@ -134,7 +134,7 @@ async def event_free_checkout(callback: types.CallbackQuery, state: FSMContext, 
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)
 
     events.update_one({'_id': ObjectId(event_id)}, {'$set': {'users': [callback.from_user.id]}})
-    await handlers.main_handlers.start(callback.message)
+
 
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")
 
@@ -167,7 +167,7 @@ async def event_payment_checkout(message: types.Message, state: FSMContext):
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)
 
     events.update_one({'_id': ObjectId(event_id)}, {'$set': {'users': [message.from_user.id]}})
-    await handlers.main_handlers.start(message)
+
 
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")
 
@@ -179,7 +179,7 @@ async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMCon
                            payload=f"user-sub%{callback.from_user.id}",
                            provider_token=YOUKASSA,
                            currency='RUB',
-                           prices=[{'label': 'Месячная подписка', 'amount': SUBSCRIBE_AMOUNT*100}])
+                           prices=[{'label': 'Месячная подписка', 'amount': subscribe_amount[0]*100}])
     await callback.message.delete()
 
 
@@ -198,7 +198,7 @@ async def subscribe_payment_checkout(message: types.Message, state: FSMContext):
 
     payment = Payment(user_id=message.from_user.id,
                       binding=user['user_id'],
-                      info=[{'label': 'Месячная подписка на бота', 'amount': SUBSCRIBE_AMOUNT}],
+                      info=[{'label': 'Месячная подписка на бота', 'amount': subscribe_amount[0]}],
                       total_amount=message.successful_payment.total_amount / 100,
                       invoice_payload=message.successful_payment.invoice_payload,
                       telegram_payment_charge_id=message.successful_payment.telegram_payment_charge_id,
@@ -213,8 +213,6 @@ async def subscribe_payment_checkout(message: types.Message, state: FSMContext):
     await payment_info(message.from_user.id, str(new_payment.inserted_id))
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)
 
-    await handlers.main_handlers.start(message)
-
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")
 
 
@@ -227,16 +225,42 @@ async def payment_info(user_id: str, payment_id: str, admin: bool = False):
     payment = payments.find_one({'_id': ObjectId(payment_id)})
     date_form = datetime(int(payment['year']), int(payment['month']), int(payment['day']), int(payment['hour']),
                          int(payment['minute']), int(payment['second'])).strftime('%Y.%m.%d %H:%M:%S')
-    check = f"Чек [{payment_id}]\n\n" \
-            f"Дата: {date_form}\n" \
-            f"Сумма платежа: {payment['total_amount']}₽\n" \
-            f"Пользователь: {payment['user_id']}\n" \
-            f"Информация:\n"
+    check = f"🧾 Чек [{payment_id}]\n\n" \
+            f"📅 Дата: {date_form}\n" \
+            f"💰 Сумма платежа: {payment['total_amount']}₽\n" \
+            f"📬 Пользователь: {payment['user_id']}\n" \
+            f"📑 Информация:\n"
     for service in payment['info']:
-        check += f"*{service['label']}: {service['amount']}₽\n"
+        check += f"- {service['label']}: {service['amount']}₽\n"
     if admin:
         check += f"\nИнформация о платеже:\n" \
                  f"Триггер:\n{payment['invoice_payload']}\n" \
                  f"ID платежа телеграмм:\n{payment['telegram_payment_charge_id']}\n" \
                  f"ID чека Yokassa:\n{payment['provider_payment_charge_id']}\n"
-    await bot.send_message(user_id, check)
+        await bot.send_message(user_id, check)
+    else:
+        keyboard = InlineKeyboardMarkup(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
+        await bot.send_message(user_id, check, reply_markup=keyboard)
+
+
+async def subscribe_amount_new(callback: types.CallbackQuery, state: FSMContext):
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
+    await Menu.admin_amount.set()
+    await callback.message.edit_text(f'Стоимость подписки: {subscribe_amount[0]}\nУстановите новую стоимость подписки:', reply_markup=keyboard)
+
+
+async def subscribe_amount_set(message: types.Message, state: FSMContext):
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
+    pattern = r'^\d+$'
+    if re.match(pattern, message.text):
+        await message.answer(f'Новая стоимость подписки установлена', reply_markup=keyboard)
+        await Menu.main.set()
+    else:
+        await message.answer(f'Установите новую стоимость подписки:', reply_markup=keyboard)
+        await Menu.admin_amount.set()
+        return
+    await send_log(f"Стоимость подписки: {subscribe_amount[0]} -> {message.text}")
+    subscribe_amount.remove(subscribe_amount[0])
+    subscribe_amount.append(int(message.text))

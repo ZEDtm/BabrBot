@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from config import loop, bot, banned_users
+from config import loop, bot, banned_users, wait_registration, admins
 import asyncio
 
 from database.collection import archive, events, users
@@ -12,7 +12,6 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 async def spreader():
     loop.create_task(events_to_archive())
-    loop.create_task(check_subscribe())
     loop.create_task(notification())
     while True:
         year, month, day, hour = datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour
@@ -21,8 +20,10 @@ async def spreader():
         if datetime(year, month, day, 8, 0, 0) < datetime.now() < datetime(year, month, day, 8, 59, 59):
             loop.create_task(check_subscribe())
             loop.create_task(notification())
-        if datetime(year, month, day, 18, 0, 0) < datetime.now() < datetime(year, month, day, 18, 59, 59):
+        if day == 1 and hour == 8 or day == 1 and hour == 16:
             loop.create_task(check_subscribe())
+        if day == 2 and hour == 0:
+            loop.create_task(check_subscribe(True))
         await asyncio.sleep(3600)
 
 
@@ -83,14 +84,20 @@ async def events_to_archive():
                 await send_log(f"Черновик [{event['name']}] -> {new_date}")
 
 
-async def check_subscribe():
+async def check_subscribe(banned = False):
     for user in users.find():
+        if user['user_id'] in banned_users or user['user_id'] in wait_registration or user['user_id'] in admins:
+            continue
         user_id = user['user_id']
         date_subscribe = datetime(int(user['subscribe_year']), int(user['subscribe_month']), int(user['subscribe_day']))
-        if date_subscribe + timedelta(days=31) < datetime.now():
+        if banned:
+            if date_subscribe + timedelta(days=2) > datetime.now():
+                continue
             banned_users.add(user_id)
             continue
-        if date_subscribe + timedelta(days=30) < datetime.now():
+        else:
+            if date_subscribe + timedelta(days=1) > datetime.now():
+                continue
             keyboard = InlineKeyboardMarkup()
             keyboard.add(InlineKeyboardButton(text='Оформить подписку', callback_data=f"user-subscribe"))
             try:

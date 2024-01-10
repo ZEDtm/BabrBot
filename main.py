@@ -7,9 +7,9 @@ from database.collection import db_config
 from modules import loop_handler
 
 import admin_handlers.new_event_handlers
-from config import dp, logging, loop, bot, DIR, banned_users, wait_registration, referral_link, admins, SUBSCRIBE_AMOUNT
+from config import dp, logging, loop, bot, DIR, banned_users, wait_registration, referral_link, admins, subscribe_amount
 from modules.bot_states import Registration, Menu, ProfileEdit, AdminNewEvent, AdminArchive, EventSubscribe, \
-    AdminEditEvent, EditUser
+    AdminEditEvent, EditUser, UsersInEvent
 
 from aiogram import executor, types
 from aiogram.dispatcher import FSMContext
@@ -72,7 +72,7 @@ async def handle_banned(callback: types.CallbackQuery):
     await callback.message.edit_text('Оформить подписку', reply_markup=keyboard)
 
 
-@dp.message_handler(commands='start', state='*')
+@dp.message_handler(commands='start', chat_type=types.ChatType.PRIVATE, state='*')
 async def start(message: types.Message):
     await main_handlers.start(message)
 
@@ -84,6 +84,28 @@ async def registration_send(message: types.Message, state: FSMContext):
     await registration_handlers.registration_send(message, state)
 
 #   ПРОФИЛЬ И РЕДАКТИРОВАНИЕ
+
+
+@dp.callback_query_handler(lambda callback: 'send-report' in callback.data, state=Menu)
+async def send_report(callback: types.CallbackQuery, state: FSMContext):
+    await handlers.profile_handlers.send_report(callback, state)
+
+
+@dp.message_handler(state=Menu.send_report)
+async def send_report_send(message: types.Message, state: FSMContext):
+    await handlers.profile_handlers.send_report_send(message, state)
+
+
+@dp.callback_query_handler(lambda callback: 'answer-report' in callback.data, state='*')
+async def send_report(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.users_handlers.answer_report(callback, state)
+
+
+@dp.message_handler(state=Menu.answer_report)
+async def send_report_send(message: types.Message, state: FSMContext):
+    await admin_handlers.users_handlers.answer_report_send(message, state)
+
+
 @dp.callback_query_handler(lambda callback: 'profile' in callback.data, state=Menu.main)
 async def profile_handler(callback: types.CallbackQuery, state: FSMContext):
     await profile_handlers.profile_handler(callback, state)
@@ -153,6 +175,17 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
 
 
 # ПОДПИСКА НА ИВЕНТ
+
+@dp.callback_query_handler(lambda callback: 'subscribe-amount' in callback.data, state=Menu)
+async def subscribe_amount_new(callback: types.CallbackQuery, state: FSMContext):
+    await handlers.subscribe_handlers.subscribe_amount_new(callback, state)
+
+
+@dp.message_handler(state=Menu.admin_amount)
+async def subscribe_amount_set(message: types.Message, state: FSMContext):
+    await handlers.subscribe_handlers.subscribe_amount_set(message, state)
+
+
 @dp.callback_query_handler(lambda callback: 'subscribe-event' in callback.data, state=Menu)
 async def event_subscribe(callback: types.CallbackQuery, state: FSMContext):
     await handlers.subscribe_handlers.event_subscribe(callback, state)
@@ -186,7 +219,25 @@ async def archive_selected_video(callback: types.CallbackQuery, state: FSMContex
 
 
 # АДМИНКА
+@dp.callback_query_handler(lambda callback: 'notify-users' in callback.data, state=Menu)
+async def notify_users(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.users_handlers.notify_users(callback, state)
+
+
+@dp.message_handler(state=Menu.admin_notify)
+async def notify_users_send(message: types.Message, state: FSMContext):
+    await admin_handlers.users_handlers.notify_users_send(message, state)
 #Пользователи
+
+@dp.callback_query_handler(lambda callback: 'notify-user' in callback.data, state=Menu)
+async def notify_users(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.users_handlers.notify_user(callback, state)
+
+
+@dp.message_handler(state=Menu.admin_notify_user)
+async def notify_users_send(message: types.Message, state: FSMContext):
+    await admin_handlers.users_handlers.notify_user_send(message, state)
+
 @dp.callback_query_handler(lambda callback: 'list-users' in callback.data, state=Menu.main)
 async def list_users(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.users_handlers.list_users(callback, state)
@@ -473,6 +524,57 @@ async def event_edit_service_add_description(message: types.Message, state: FSMC
 async def event_edit_service_add_price(message: types.Message, state: FSMContext):
     await admin_handlers.events_handlers.event_edit_service_price_set(message, state)
 
+
+@dp.callback_query_handler(lambda callback: 'event-edit-date' in callback.data, state='*')
+async def event_edit_time(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.event_edit_time(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'select_time' in callback.data, state=AdminEditEvent.event_date)
+async def event_edit_duration(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.event_edit_duration(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'start_days' in callback.data, state=AdminEditEvent.event_date)
+async def event_edit_date(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.event_edit_date(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: re.match(r'^new_event_calendar:(.*)', callback.data), state=AdminEditEvent.event_date)
+async def event_edit_date_set(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.event_edit_date_set(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'cancel-event' in callback.data, state='*')
+async def event_cancel(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.event_cancel(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'event-users' in callback.data, state='*')
+async def event_users(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.event_users(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'event_users' in callback.data, state=UsersInEvent.list)
+async def event_users_select(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.event_users_select(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'user-del-event' in callback.data, state=UsersInEvent.list)
+async def user_del_event(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.user_del_event(callback, state)
+
+
+@dp.callback_query_handler(lambda callback: 'notify-users' in callback.data, state=UsersInEvent.list)
+async def notify_users(callback: types.CallbackQuery, state: FSMContext):
+    await admin_handlers.events_handlers.notify_users(callback, state)
+
+
+@dp.message_handler(state=UsersInEvent.list)
+async def notify_users_send(message: types.Message, state: FSMContext):
+    await admin_handlers.events_handlers.notify_users_send(message, state)
+
+
 # Список мероприятий
 @dp.callback_query_handler(lambda callback: 'list_events' in callback.data, state=Menu.main)
 async def list_events(callback: types.CallbackQuery, state: FSMContext):
@@ -493,6 +595,8 @@ async def admin_calendar(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(lambda callback: 'admin_event_calendar' in callback.data, state='*')
 async def admin_calendar_select(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.events_handlers.admin_calendar_select(callback, state)
+    print(callback.data)
+
 
 
 # Архив мероприятий
@@ -536,16 +640,15 @@ async def archive_add_link_set(message: types.Message, state: FSMContext):
     await admin_handlers.archive_handlers.archive_add_link_set(message, state)
 
 
-@dp.message_handler(state='*')
+@dp.message_handler(chat_type=types.ChatType.PRIVATE, state='*')
 async def non_state(message):
     await message.delete()
-    print(message.chat.id)
 
 
 async def on_startup(dp):
     await bot.set_webhook(WEBHOOK_URL)
     conf = db_config.find_one({'_id': ObjectId('659c6a3d1e2c9f558337a9b2')})
-    SUBSCRIBE_AMOUNT = conf['SUBSCRIBE_AMOUNT']
+    subscribe_amount.append(conf['SUBSCRIBE_AMOUNT'][0])
     for user in conf['banned_users']:
         banned_users.add(user)
     for user in conf['wait_registration']:
@@ -560,7 +663,7 @@ async def on_shutdown(dp):
         '$set': {'banned_users': [user for user in banned_users],
                  'wait_registration': [user for user in wait_registration],
                  'admins': [user for user in admins],
-                 'SUBSCRIBE_AMOUNT': SUBSCRIBE_AMOUNT}})
+                 'SUBSCRIBE_AMOUNT': subscribe_amount}})
     logging.warning('Shutting down..')
     await bot.delete_webhook()
     await dp.storage.close()

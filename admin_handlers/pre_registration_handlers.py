@@ -7,8 +7,8 @@ from datetime import datetime
 from bson import ObjectId
 
 from config import LOG_CHAT, bot, wait_registration, admins, DIR, referral_link, CHANNEL, CHAT
-from database.collection import users
-from database.models import User
+from database.collection import users, preusers
+from database.models import User, PreUser
 from modules.bot_states import Registration
 
 from aiogram import types
@@ -19,18 +19,23 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeybo
 from modules.logger import send_log
 
 
-async def registration_full_name(callback: types.CallbackQuery, state):
-    if callback.from_user.id not in admins:
-        return
-    user = callback.data.split(sep='%')[1]
-    if int(users.find_one({'_id': ObjectId(user)})['user_id']) not in wait_registration:
-        await callback.message.edit_text('😖 Этот пользователь уже добавлен')
+async def registration_phone_number(callback: types.CallbackQuery, state):
+    await callback.message.edit_text("✏ Укажите номер телефона резидента. Обратите внимание, номер телефона будет проверяться с номером телеграм-аккаунта!\n\n Начинайте с 7:")
+    await Registration.phone_number.set()
+
+
+async def registration_full_name(message: types.Message, state: FSMContext):
+    pattern = r"^7\d{10}$"
+    if not re.match(pattern, message.text):
+        await message.answer(
+            '😔 Вы указали неправильный номер!\nПервая цифра 7, всего 11 цифр.\n\n✏ Пример: 79158252110')
+        await Registration.phone_number.set()
         return
     async with state.proxy() as data:
-        data['user_db_id'] = user
-    await callback.message.answer("✏ Укажите ФИО резидента:")
+        data['phone_number'] = message.text
+    await message.answer("✏ Укажите ФИО резидента:")
     await Registration.full_name.set()
-    await send_log(f"Администратор[{callback.from_user.id}]: Заявка[{user}] -> Редактирование")
+    await send_log(f"Администратор[{message.from_user.id}]: Новый пользователь[{message.text}] -> Пользователь")
 
 
 async def registration_description(message: types.Message, state: FSMContext):
@@ -100,11 +105,12 @@ async def registration_image(message: types.Message, state: FSMContext):
     await message.reply("📸 Пришлите фотография для профиля:", reply_markup=keyboard)
 
 
+
 async def end_registration_no_image(message: types.Message, state: FSMContext):
     remove_keyboard = types.ReplyKeyboardRemove()
     await bot.send_message(message.from_user.id, '😁 Удаление клавиатуры', reply_markup=remove_keyboard)
     async with state.proxy() as data:
-        user_db_id = data['user_db_id']
+        phone_number = data['phone_number']
         full_name = data['full_name']
         description = data['description']
         company_name = data['company_name']
@@ -112,32 +118,22 @@ async def end_registration_no_image(message: types.Message, state: FSMContext):
         video = data['video'] if data['video'] != '' else None
     await state.finish()
 
-    user = users.find_one({'_id': ObjectId(user_db_id)})
+    pre_user = PreUser(full_name=full_name,
+                       phone_number=phone_number,
+                       description=description,
+                       company_name=company_name,
+                       company_site=company_site,
+                       image='',
+                       video=video)
 
-    users.update_one(user, {'$set': {'full_name': full_name,
-                                     'description': description,
-                                     'image': None,
-                                     'company_name': company_name,
-                                     'company_site': company_site,
-                                     'video': video}})
+    insert = preusers.insert_one(pre_user())
 
-    keyboard = InlineKeyboardMarkup()
     admin = InlineKeyboardMarkup()
+    admin.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
 
-    wait_registration.discard(user['user_id'])
-    try:
-        link_channel = await bot.export_chat_invite_link(CHANNEL)
-        link_chat = await bot.export_chat_invite_link(CHAT)
-        keyboard.add(InlineKeyboardButton(text='📣 Наш канал', url=link_channel))
-        keyboard.add(InlineKeyboardButton(text='💬 Наш чат', url=link_chat))
-        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
-        await bot.send_message(user['user_id'], '😁 Вы успешно зарегистрированы!', reply_markup=keyboard)
-    except:
-        admin.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
-        await message.answer('😖 Пользователь заблокировал бота')
     await message.answer("😁 Пользователь успешно добавлен", reply_markup=admin)
 
-    await send_log(f"Администратор[{message.from_user.id}]: Пользователь[{user['user_id']}] -> Пользователи")
+    await send_log(f"Администратор[{message.from_user.id}]: Пользователь[{str(insert.inserted_id)}] -> Пользователи")
 
 
 async def end_registration(message: types.Message, state: FSMContext):
@@ -147,14 +143,13 @@ async def end_registration(message: types.Message, state: FSMContext):
     # Получаем последнюю фотографию
     last_photo = photo_sizes[-1]
     async with state.proxy() as data:
-        user_db_id = data['user_db_id']
-        user = users.find_one({'_id': ObjectId(user_db_id)})
 
         file = await bot.get_file(last_photo.file_id)
         file_name = f'{last_photo.file_id}.jpg'
-        await bot.download_file(file.file_path, destination=f"{DIR}/users/{user['user_id']}/{file_name}")
-        image = f"{DIR}/users/{user['user_id']}/{file_name}"
+        await bot.download_file(file.file_path, destination=f"{DIR}/users/{data['phone_number']}/{file_name}")
+        image = f"{DIR}/users/{data['phone_number']}/{file_name}"
 
+        phone_number = data['phone_number']
         full_name = data['full_name']
         description = data['description']
         company_name = data['company_name']
@@ -162,34 +157,19 @@ async def end_registration(message: types.Message, state: FSMContext):
         video = data['video'] if data['video'] != '' else None
     await state.finish()
 
-    users.update_one(user, {'$set': {'full_name': full_name,
-                                     'description': description,
-                                     'image': image,
-                                     'company_name': company_name,
-                                     'company_site': company_site,
-                                     'video': video}})
+    pre_user = PreUser(full_name=full_name,
+                       phone_number=phone_number,
+                       description=description,
+                       company_name=company_name,
+                       company_site=company_site,
+                       image=image,
+                       video=video)
 
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
+    insert = preusers.insert_one(pre_user())
 
-    wait_registration.discard(user['user_id'])
-    try:
-        await bot.send_message(user['user_id'], '😁 Вы успешно зарегистрированы!', reply_markup=keyboard)
-    except:
-        await message.answer('😖 Пользователь заблокировал бота')
-    await message.answer("😁 Пользователь успешно добавлен", reply_markup=keyboard)
+    admin = InlineKeyboardMarkup()
+    admin.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
 
-    await send_log(f"Администратор[{message.from_user.id}]: Пользователь[{user['user_id']}] -> Пользователи")
+    await message.answer("😁 Пользователь успешно добавлен", reply_markup=admin)
 
-
-async def new_admin(callback: types.CallbackQuery, state: FSMContext):
-    letters = string.ascii_lowercase
-    rand_string = ''.join(random.choice(letters) for i in range(20))
-    referral_link.add(rand_string)
-    link = f"https://t.me/{callback.message.from_user.username}?start={rand_string}"
-    text = f"🤔 Вы создали ссылку для добавления Администратора:\n\n" \
-           f"{link}\n\n" \
-           f"🤫 Не отправляйте ее в чаты и незнакомым людям!\n🛎 Ссылка действительна только 1 раз!"
-    await callback.message.answer(text)
-
-    await send_log(f"Администратор[{callback.from_user.id}]: Добавить администратора <- Ссылка")
+    await send_log(f"Администратор[{message.from_user.id}]: Пользователь[{str(insert.inserted_id)}] -> Пользователи")

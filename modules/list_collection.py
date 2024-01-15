@@ -21,13 +21,13 @@ class ListEvents:
                 form = 'Черновик'
             keyboard.add(InlineKeyboardButton(text=f"✏ [{form}] {name}", callback_data=f"events_list-y-{str(collection[i]['_id'])}-{current_page}"))
         if current_page > 1 and start_with < lenght:
-            keyboard.add(InlineKeyboardButton(text="➡", callback_data=f'events_list-n-{current_page - 1}'),
-                         InlineKeyboardButton(text="⬅", callback_data=f'events_list-n-{current_page + 1}'))
+            keyboard.add(InlineKeyboardButton(text="⬅", callback_data=f'events_list-n-{current_page - 1}'),
+                         InlineKeyboardButton(text="➡", callback_data=f'events_list-n-{current_page + 1}'))
         elif start_with < lenght:
             keyboard.add(InlineKeyboardButton(text=" ", callback_data=f'events_list-i-{current_page}'),
-                         InlineKeyboardButton(text="⬅", callback_data=f'events_list-n-{current_page + 1}'))
+                         InlineKeyboardButton(text="➡", callback_data=f'events_list-n-{current_page + 1}'))
         elif current_page > 1:
-            keyboard.add(InlineKeyboardButton(text="➡", callback_data=f'events_list-n-{current_page - 1}'),
+            keyboard.add(InlineKeyboardButton(text="⬅", callback_data=f'events_list-n-{current_page - 1}'),
                          InlineKeyboardButton(text=" ", callback_data=f'events_list-i-{current_page}'))
         keyboard.add(InlineKeyboardButton(text="🏠 В меню", callback_data='menu'))
 
@@ -94,7 +94,7 @@ class ListResidents:
             name = collection[i]['full_name'].split()
             full_name = f"{name[0]} {name[1][0]}.{name[2][0]}"
 
-            keyboard.add(InlineKeyboardButton(text=f"🏢 {collection[i]['full_name']} 👤 {full_name}", callback_data=f"residents_list-y-{str(collection[i]['_id'])}-{current_page}"))
+            keyboard.add(InlineKeyboardButton(text=f"🏢 {collection[i]['company_name']} 👤 {full_name}", callback_data=f"residents_list-y-{str(collection[i]['_id'])}-{current_page}"))
         if current_page > 1 and start_with < lenght:
             keyboard.add(InlineKeyboardButton(text="⬅️", callback_data=f'residents_list-n-{current_page - 1}'),
                          InlineKeyboardButton(text="➡", callback_data=f'residents_list-n-{current_page + 1}'))
@@ -253,7 +253,7 @@ class ListUsersInEvent:
             keyboard.add(InlineKeyboardButton(text="⬅", callback_data=f'event_users-n-{current_page - 1}'),
                          InlineKeyboardButton(text=" ", callback_data=f'event_users-i-{current_page}'))
         event_id = callback_data.split(sep=':')[5]
-        keyboard.add(InlineKeyboardButton(text="📢 Оповестить участников", callback_data=f'notify-users%{event_id}'))
+        keyboard.add(InlineKeyboardButton(text="📢 Оповестить участников", callback_data=f'notify-e-users%{event_id}'))
         keyboard.add(InlineKeyboardButton(text="🏠 В меню", callback_data='menu'),
                      InlineKeyboardButton(text='↩ Назад', callback_data=callback_data))
 

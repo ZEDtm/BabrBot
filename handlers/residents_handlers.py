@@ -25,13 +25,11 @@ async def residents_handler_select(callback: types.CallbackQuery, state: FSMCont
 
 async def resident_info(callback: types.CallbackQuery, resident_id: str, current_page: int, state: FSMContext):
     keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
-                 InlineKeyboardButton(text='↩️ Назад', callback_data=f'residents_list-n-{current_page}'))
+
 
     user = users.find_one({'_id': ObjectId(resident_id)})
     name = user['full_name'].split()
     telegram_user_name = user['telegram_user_name']
-    site = user['company_site']
     image_path = user['image']
 
     text = f"💼 Информация о {name[0]} {name[1][0]}.{name[2][0]}.:\n\n"
@@ -40,8 +38,6 @@ async def resident_info(callback: types.CallbackQuery, resident_id: str, current
 
     text += f"📞 Номер телефона: +{user['phone_number']}\n" \
             f"🏢 Компания: {user['company_name']}\n"
-    if site:
-        text += f"🔗 Сайт компании: <a href='{site}'>*перейти*</a>\n"
     text += f"\n📋 Описание:\n {user['description']}\n"
 
     events_data = events.find({'users': {'$in': [user['user_id']]}})
@@ -49,7 +45,12 @@ async def resident_info(callback: types.CallbackQuery, resident_id: str, current
         text += "\n👤 Участвует в мероприятиях:\n"
         for event in events_data:
             text += f"- {event['name']}\n"
-
+    if user['company_site']:
+        keyboard.add(InlineKeyboardButton(text='🌐 Ссылка на сайт', url=user['company_site']))
+    if user['video']:
+        keyboard.add(InlineKeyboardButton(text='🎬 Видео-карточка', url=user['video']))
+    keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
+                 InlineKeyboardButton(text='↩️ Назад', callback_data=f'residents_list-n-{current_page}'))
 
     if image_path:
         await bot.send_photo(callback.from_user.id, photo=types.InputFile(image_path))

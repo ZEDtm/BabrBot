@@ -27,6 +27,17 @@ class Registration(StatesGroup):
     company_name = State()
     company_site = State()
     image = State()
+    video = State()
+
+
+class PreRegistration(StatesGroup):
+    phone_number = State()
+    full_name = State()
+    description = State()
+    company_name = State()
+    company_site = State()
+    image = State()
+    video = State()
 
 
 class EditUser(StatesGroup):
@@ -36,6 +47,8 @@ class EditUser(StatesGroup):
     company_name = State()
     company_site = State()
     image = State()
+    video = State()
+    subscribe = State()
     delete = State()
 
 

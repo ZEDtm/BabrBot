@@ -12,14 +12,29 @@ class User:
     phone_number: str
     description: str
     image: str
+    video: str
     company_name: str
     company_site: str
-    subscribe_year: int
-    subscribe_month: int
-    subscribe_day: int
+    subscribe: int
 
     def __call__(self):
         return asdict(self)
+
+
+@dataclass
+class PreUser:
+    full_name: str
+    phone_number: str
+    description: str
+    image: str
+    company_name: str
+    company_site: str
+    video: str
+
+    def __call__(self):
+        return asdict(self)
+
+
 
 @dataclass
 class Admin:
@@ -33,9 +48,8 @@ class Admin:
     image: None
     company_name: str
     company_site: None
-    subscribe_year: int
-    subscribe_month: int
-    subscribe_day: int
+    video: str
+    subscribe: int
 
     def __call__(self):
         return asdict(self)

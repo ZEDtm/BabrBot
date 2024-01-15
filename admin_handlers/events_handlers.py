@@ -55,7 +55,8 @@ async def event_handle(callback: types.CallbackQuery, state: FSMContext, event_i
     keyboard.add(InlineKeyboardButton(text='✏ Стоимость', callback_data=f"event-edit-price%{event_id}"),
                  InlineKeyboardButton(text='✏ Услуги', callback_data=f"event-edit-services%{event_id}"))
     keyboard.add(InlineKeyboardButton(text='✏ Время, дата, длительность', callback_data=f"event-edit-date%{event_id}"))
-    keyboard.add(InlineKeyboardButton(text='👥 Участники', callback_data=f"event-users%{event_id}"))
+    keyboard.add(InlineKeyboardButton(text='👥 Участники', callback_data=f"event-users%{event_id}"),
+                 InlineKeyboardButton(text='❌ Удалить', callback_data=f"event-delete%{event_id}"))
     if current_page:
         keyboard.add(InlineKeyboardButton(text='🏠 В Меню', callback_data=f"menu"),
                      InlineKeyboardButton(text='↩ Назад', callback_data=f"events_list-n-{current_page}"))
@@ -478,3 +479,11 @@ async def notify_users_send(message: types.Message, state: FSMContext):
             blocked += 1
     await send_log(f"Мероприятие[{event['name']}]:Пользователи -> [Рассылка] <- {message.text}")
     await message.answer(f'Рассылка:\nОтправлено: {send}\nЗаблокировано:{blocked}', reply_markup=keyboard)
+
+
+async def event_delete(callback: types.CallbackQuery, state: FSMContext):
+    event_id = callback.data.split(sep='%')[1]
+    events.delete_one({'_id': ObjectId(event_id)})
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton('🏠 В меню', callback_data='menu'))
+    await callback.message.edit_text('😖 Успешно удалено')

@@ -18,16 +18,13 @@ async def profile_handler(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(Menu.profile)
     user = find_user(callback.from_user.id)
 
-    keyboard = InlineKeyboardMarkup(row_width=1)
-    keyboard.add(InlineKeyboardButton(text='📢 Обратная связь', callback_data='send-report'),
-                 InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
+    keyboard = InlineKeyboardMarkup()
 
     text = f"📋 Ваша анкета:\n\n" \
            f"👤 ФИО: {user['full_name']}\n" \
-           f"📞 Номер телефона: {user['phone_number']}\n" \
+           f"📞 Номер телефона: +{user['phone_number']}\n" \
            f"🏢 Название компании: {user['company_name']}\n"
-    if user['company_site']:
-        text += f"📰  Сайт компании: <a href='{user['company_site']}'>*перейти*</a>\n"
+
     text +=f"\n📋 Описание:\n {user['description']}\n"
     events_data = events.find({'users': {'$in': [user['user_id']]}})
     if events_data:
@@ -35,6 +32,12 @@ async def profile_handler(callback: types.CallbackQuery, state: FSMContext):
         for event in events_data:
             text += f"- {event['name']}\n"
 
+    if user['company_site']:
+        keyboard.add(InlineKeyboardButton(text='🌐 Ссылка на сайт', url=user['company_site']))
+    if user['video']:
+        keyboard.add(InlineKeyboardButton(text='🎬 Видео-карточка', url=user['video']))
+    keyboard.add(InlineKeyboardButton(text='📢 Обратная связь', callback_data='send-report'),
+                 InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
     image_path = user['image']
     if image_path:
         await bot.send_photo(callback.from_user.id, photo=types.InputFile(image_path))

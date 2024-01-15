@@ -90,9 +90,9 @@ async def archive_selected(callback: types.CallbackQuery, state: FSMContext, arc
     if len(arch['link']) > 0:
         keyboard.add(InlineKeyboardButton(text='☁️ Облако', url=arch['link']))
     if path.isdir(f"{DIR}/archive/{archive_id}/images"):
-        keyboard.add(InlineKeyboardButton(text='🎥 Посмотреть фото', callback_data=f'archive-images%{archive_id}'))
+        keyboard.add(InlineKeyboardButton(text='📷 Посмотреть фото', callback_data=f'archive-images%{archive_id}'))
     if path.isdir(f"{DIR}/archive/{archive_id}/video"):
-        keyboard.add(InlineKeyboardButton(text='📷 Посмотреть видео', callback_data=f'archive-video%{archive_id}'))
+        keyboard.add(InlineKeyboardButton(text='🎥 Посмотреть видео', callback_data=f'archive-video%{archive_id}'))
 
     keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
                  InlineKeyboardButton(text='↩️ Назад', callback_data=f"event_calendar:CURRENT:{arch['year']}:{arch['month']}:{arch['day']}: "))

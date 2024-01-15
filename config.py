@@ -14,7 +14,9 @@ TOKEN = getenv('TOKEN')
 MONGO_LOGIN = getenv('MONGO_LOGIN')
 MONGO_PASS = getenv('MONGO_PASS')
 YOUKASSA = getenv('YOUKASSA')
-LOG_CHAT = '-1001944137028'
+LOG_CHAT = '-1002103130340'
+CHAT = '-1002118270393'
+CHANNEL = '-1002010903682'
 
 DIR = path.dirname(path.abspath(__file__))
 
@@ -27,7 +29,6 @@ banned_users = set()
 wait_registration = set()
 admins = set()
 referral_link = set()
-admins.add(5475217426)
 
 logging.basicConfig(level=logging.INFO)
 

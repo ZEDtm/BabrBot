@@ -1,19 +1,20 @@
-import logging
+
 from datetime import datetime, timedelta
-from config import loop, bot, banned_users, wait_registration, admins, referral_link
+from config import loop, bot, banned_users, wait_registration, admins, referral_link, CHANNEL, CHAT
 import asyncio
 
 from database.collection import archive, events, users
 from database.models import Archive
 from modules.logger import send_log
-
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 async def spreader():
-    loop.create_task(events_to_archive())
-    loop.create_task(notification())
+    #loop.create_task(events_to_archive())
+    #loop.create_task(notification())
+    #loop.create_task(check_subscribe())
     while True:
+        #await send_log('Запустился обработчик задач')
         year, month, day, hour = datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour
         if datetime(year, month, day, 21, 0, 0) < datetime.now() < datetime(year, month, day, 21, 59, 59):
             loop.create_task(events_to_archive())
@@ -30,29 +31,32 @@ async def spreader():
 
 
 async def notification():
-    for event in events.find():
+    for event in events.find({'public': True}):
         keyboard = InlineKeyboardMarkup()
 
         now = datetime(datetime.now().year, datetime.now().month, datetime.now().day, 0, 0, 0)
         date = datetime(int(event['year']), int(event['month']), int(event['day']), 0, 0, 0)
 
         if date - timedelta(days=7) == now:
+            await send_log(f"Пользователи <- уведомление о предстоящем мероприятии <- Мероприятие[{event['name']}]")
             keyboard.add(InlineKeyboardButton(text=f"{event['name']}", callback_data=f"event_calendar:event:{date.year}:{date.month}:{date.day}:{str(event['_id'])}"))
             for user_id in event['users']:
                 try:
-                    await bot.send_message(user_id, f"🔔 Уважаемые участники мероприятия:\n{event['name']}\n\n⏱ До начала осталось неделя!", reply_markup=keyboard)
+                    await bot.send_message(user_id, f"🔔 Уважаемые участники мероприятия:\n{event['name']}\n\n⏱ До начала осталась неделя!", reply_markup=keyboard)
                 except:
                     pass
 
         if date - timedelta(days=3) == now:
+            await send_log(f"Пользователи <- уведомление о предстоящем мероприятии <- Мероприятие[{event['name']}]")
             keyboard.add(InlineKeyboardButton(text=f"{event['name']}", callback_data=f"event_calendar:event:{date.year}:{date.month}:{date.day}:{str(event['_id'])}"))
             for user_id in event['users']:
                 try:
-                    await bot.send_message(user_id, f"🔔 Уважаемые участники мероприятия:\n{event['name']}\n\n⏱ До начала осталась 3 дня!", reply_markup=keyboard)
+                    await bot.send_message(user_id, f"🔔 Уважаемые участники мероприятия:\n{event['name']}\n\n⏱ До начала осталось 3 дня!", reply_markup=keyboard)
                 except:
                     pass
 
         if date - timedelta(days=1) == now:
+            await send_log(f"Пользователи <- уведомление о предстоящем мероприятии <- Мероприятие[{event['name']}]")
             keyboard.add(InlineKeyboardButton(text=f"{event['name']}", callback_data=f"event_calendar:event:{date.year}:{date.month}:{date.day}:{str(event['_id'])}"))
             for user_id in event['users']:
                 try:
@@ -79,32 +83,44 @@ async def events_to_archive():
 
                 await send_log(f"Мероприятие [{event['name']}] -> Архив")
             else:
-                new_date = datetime.now() + timedelta(days=1)
-                new = {"$set": {'year': new_date.year, 'month': new_date.month, 'day': new_date.day}}
-                events.update_one(event, new)
+                events.delete_one(event)
 
-                await send_log(f"Черновик [{event['name']}] -> {new_date}")
+                await send_log(f"Черновик [{event['name']}] -> Удален")
 
 
-async def check_subscribe(banned = False):
+async def check_subscribe(banned=False):
     for user in users.find():
         if user['user_id'] in banned_users or user['user_id'] in wait_registration or user['user_id'] in admins:
             continue
         user_id = user['user_id']
-        date_subscribe = datetime(int(user['subscribe_year']), int(user['subscribe_month']), int(user['subscribe_day']))
-        if banned:
-            if date_subscribe + timedelta(days=2) > datetime.now():
-                continue
-            banned_users.add(user_id)
+        month = user['subscribe']
+        if month == 1111:
             continue
-        else:
-            if date_subscribe + timedelta(days=1) > datetime.now():
+        if month - 1 == -1:
+            if banned:
+                banned_users.add(user_id)
+                await send_log(f"Блокирую доступ за неоплаченную подписку <- Пользователь[{user_id}]")
+                try:
+                    await bot.kick_chat_member(CHAT, user_id)
+                except:
+                    pass
+                try:
+                    await bot.kick_chat_member(CHANNEL, user_id)
+                except:
+                    pass
                 continue
-            keyboard = InlineKeyboardMarkup()
-            keyboard.add(InlineKeyboardButton(text='🎫 Оформить подписку', callback_data=f"user-subscribe"))
-            try:
-                await bot.send_message(user_id, '😔 Ваша подписка окончена\nПожалуйста, оформите подписку:', reply_markup=keyboard)
-            except:
-                pass
+            else:
+                await send_log(f"Уведомление о неоплаченной подписке -> Пользователь[{user_id}]")
+                keyboard = InlineKeyboardMarkup(row_width=1)
+                keyboard.add(InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"),
+                             InlineKeyboardButton(text='🎫 Оформить на 3 месяца', callback_data=f"user-subscribe%3"),
+                             InlineKeyboardButton(text='🎫 Оформить на 6 месяцев', callback_data=f"user-subscribe%6"),
+                             InlineKeyboardButton(text='🎫 Оформить на год', callback_data=f"user-subscribe%12"))
+                try:
+                    await bot.send_message(user_id, '😔 Ваша подписка окончена\nПожалуйста, оформите подписку:', reply_markup=keyboard)
+                except:
+                    pass
+        else:
+            users.update_one(user, {'$set': {'subscribe': month - 1}})
 
 

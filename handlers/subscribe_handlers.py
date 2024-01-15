@@ -8,7 +8,7 @@ import handlers.main_handlers
 from database.collection import events, find_event, archive, payments, users
 from database.models import Payment
 from modules.bot_states import Menu, EventSubscribe
-from config import DIR, bot, LOG_CHAT, YOUKASSA, banned_users, subscribe_amount
+from config import DIR, bot, LOG_CHAT, YOUKASSA, banned_users, subscribe_amount, CHANNEL, CHAT
 from bson import ObjectId
 
 from aiogram import types
@@ -174,42 +174,53 @@ async def event_payment_checkout(message: types.Message, state: FSMContext):
 
 
 async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMContext):
+    months = int(callback.data.split(sep='%')[1])
+    amount = months * (subscribe_amount[0])*100
+
     await bot.send_invoice(callback.from_user.id,
-                           title='Подписки',
-                           description='Оформление месячной подписки',
-                           payload=f"user-sub%{callback.from_user.id}",
+                           title='Подписка на БАБР',
+                           description=f'Оформление подписки на {months} месяц.',
+                           payload=f"user-sub%{callback.from_user.id}%{months}",
                            provider_token=YOUKASSA,
                            currency='RUB',
-                           prices=[{'label': 'Месячная подписка', 'amount': subscribe_amount[0]*100}])
+                           prices=[{'label': 'Подписка на БАБР', 'amount': amount}])
     await callback.message.delete()
 
 
 async def subscribe_payment_checkout(message: types.Message, state: FSMContext):
     user_id = int(message.successful_payment.invoice_payload.split(sep='%')[1])
+    months = int(message.successful_payment.invoice_payload.split(sep='%')[2])
     user = users.find_one({'user_id': user_id})
+    new_subscribe = user['subscribe'] + months
+    await send_log(f'Пользователь[{user_id}] -> Подписка <- {new_subscribe}')
+    users.update_one(user, {'$set': {'subscribe': new_subscribe}})
     banned_users.discard(user_id)
+    try:
+        await bot.unban_chat_member(CHAT, user_id)
+    except:
+        pass
+    try:
+        await bot.unban_chat_member(CHANNEL, user_id)
+    except:
+        pass
+    await send_log(f'Пользователь[{user_id}] -> Доступ <- Канал, Чат, Бот')
 
-    date = datetime(int(user['year']), int(user['month']), int(user['day']))
+
     now = datetime.now()
-    if date + timedelta(days=31) < now:
-        users.update_one({'_id': ObjectId(user['_id'])}, {'$set': {'subscribe_year': now.year, 'subscribe_month': now.month, 'subscribe_day': now.day}})
-    else:
-        date += timedelta(days=31)
-        users.update_one({'_id': ObjectId(user['_id'])}, {'$set': {'subscribe_year': date.year, 'subscribe_month': date.month, 'subscribe_day': date.day}})
 
     payment = Payment(user_id=message.from_user.id,
                       binding=user['user_id'],
-                      info=[{'label': 'Месячная подписка на бота', 'amount': subscribe_amount[0]}],
+                      info=[{'label': f'Подписка на {months} месяц.', 'amount': message.successful_payment.total_amount / 100}],
                       total_amount=message.successful_payment.total_amount / 100,
                       invoice_payload=message.successful_payment.invoice_payload,
                       telegram_payment_charge_id=message.successful_payment.telegram_payment_charge_id,
                       provider_payment_charge_id=message.successful_payment.provider_payment_charge_id,
-                      year=date.year,
-                      month=date.month,
-                      day=date.day,
-                      hour=date.hour,
-                      minute=date.minute,
-                      second=date.second)
+                      year=now.year,
+                      month=now.month,
+                      day=now.day,
+                      hour=now.hour,
+                      minute=now.minute,
+                      second=now.second)
     new_payment = payments.insert_one(payment())
     await payment_info(message.from_user.id, str(new_payment.inserted_id))
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)

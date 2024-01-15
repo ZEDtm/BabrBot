@@ -8,7 +8,7 @@ from datetime import datetime
 from bson import ObjectId
 
 import handlers.main_handlers
-from config import LOG_CHAT, bot, wait_registration, admins, DIR, referral_link, banned_users
+from config import LOG_CHAT, bot, wait_registration, admins, DIR, referral_link, banned_users, CHAT, CHANNEL
 from database.collection import users, events
 from database.models import User
 from modules.bot_states import Registration, EditUser, Menu
@@ -24,8 +24,10 @@ from modules.logger import send_log
 
 async def list_users(callback: types.CallbackQuery, state: FSMContext):
     keyboard = InlineKeyboardMarkup(row_width=1)
+    await Menu.main.set()
     keyboard.add(InlineKeyboardButton(text='✏ Резиденты', callback_data='list-rusers'),
                  InlineKeyboardButton(text='📝 Заявки на добавление', callback_data='list-wusers'),
+                 InlineKeyboardButton(text='➕ Добавить резидента', callback_data='add-new-user'),
                  InlineKeyboardButton(text='👨‍💻 Администраторы', callback_data='list-ausers'),
                  InlineKeyboardButton(text='🔐 Добавить администратора', callback_data='add-admin'),
                  InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
@@ -76,6 +78,8 @@ async def resident_info(callback: types.CallbackQuery, resident_id: str, current
                  InlineKeyboardButton(text='✏ Компания', callback_data=f"edit-user-company_name%{resident_id}"))
     keyboard.add(InlineKeyboardButton(text='✏ Сайт', callback_data=f"edit-user-company_site%{resident_id}"),
                  InlineKeyboardButton(text='📸 Фото', callback_data=f"edit-user-image%{resident_id}"))
+    keyboard.add(InlineKeyboardButton(text='🎥 Видео', callback_data=f"edit-user-video%{resident_id}"),
+                 InlineKeyboardButton(text='💰 Подписка', callback_data=f"edit-user-sub%{resident_id}"))
     keyboard.add(InlineKeyboardButton(text='❌ Удалить', callback_data=f"delete-user%{resident_id}"))
     keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
                  InlineKeyboardButton(text='↩ Назад', callback_data=f'rusers_list-n-{current_page}'))
@@ -87,10 +91,12 @@ async def resident_info(callback: types.CallbackQuery, resident_id: str, current
     text += f"\n👤 ФИО:\n {user['full_name']}\n" \
             f"📞Номер телефона: +{user['phone_number']}\n\n" \
             f"📖 Описание:\n{user['description']}\n\n" \
-            f"🏢 Название компании: {user['company_name']}\n"
+            f"🏢 Название компании: {user['company_name']}\n" \
+            f"💰 Подписка: {user['subscribe']} мес\n"
     if user['company_site']:
-        text += f"🔗 Сайт: {user['company_site']}"
-
+        text += f"🔗 Сайт: {user['company_site']}\n"
+    if user['video']:
+        text += f"🎥 Видео-карточка: {user['video']}"
     if image_path:
         await bot.send_photo(callback.from_user.id, photo=types.InputFile(image_path))
     await callback.message.answer(text, parse_mode='HTML', reply_markup=keyboard, disable_web_page_preview=True)
@@ -222,6 +228,7 @@ async def edit_user_company_name(callback: types.CallbackQuery, state):
                      InlineKeyboardButton(text='↩ Назад', callback_data=f"rusers_list-y-{user}-1"))
 
         await callback.message.edit_text("✏ Укажите название компании:", reply_markup=keyboard)
+    await EditUser.company_name.set()
 
 
 async def edit_user_company_name_set(message: types.Message, state):
@@ -243,7 +250,7 @@ async def edit_user_company_site(callback: types.CallbackQuery, state):
     async with state.proxy() as data:
         data['user_db_id'] = user
         keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
-                     InlineKeyboardButton(text='↩ Назад', callback_data=f"rusers_list-y-{user}-0"))
+                     InlineKeyboardButton(text='↩ Назад', callback_data=f"rusers_list-y-{user}-1"))
 
     await callback.message.edit_text("🔗 Укажите новую ссылку:", reply_markup=keyboard)
     await EditUser.company_site.set()
@@ -308,6 +315,77 @@ async def edit_user_image_set(message: types.Message, state):
     await Menu.main.set()
 
 
+async def edit_user_video(callback: types.CallbackQuery, state):
+    keyboard = InlineKeyboardMarkup()
+    user = callback.data.split(sep='%')[1]
+    async with state.proxy() as data:
+        data['user_db_id'] = user
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=f"rusers_list-y-{user}-1"))
+
+    await callback.message.edit_text("🎥 Укажите ссылку на видео:", reply_markup=keyboard)
+    await EditUser.video.set()
+
+
+async def edit_user_video_set(message: types.Message, state):
+    url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    if not re.match(url_pattern, message.text):
+        await message.answer('😔 Вы указали неправильную ссылку!\nОна должна начинаться с http:// или https://.')
+        await EditUser.company_site.set()
+        return
+    keyboard = InlineKeyboardMarkup()
+    async with state.proxy() as data:
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=f"rusers_list-y-{data['user_db_id']}-1"))
+
+        users.update_one({'_id': ObjectId(data['user_db_id'])}, {'$set': {'video': message.text}})
+
+        await message.answer("🎥 Cылка на видео изменена:", reply_markup=keyboard)
+        await send_log(f"Администратор[{message.from_user.id}]: Пользователь[{data['user_db_id']}] <- {message.text}")
+    await Menu.main.set()
+
+
+async def edit_user_subscribe(callback: types.CallbackQuery, state):
+    keyboard = InlineKeyboardMarkup()
+    user = callback.data.split(sep='%')[1]
+    async with state.proxy() as data:
+        data['user_db_id'] = user
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=f"rusers_list-y-{user}-1"))
+
+    await callback.message.edit_text("💰 Укажите кол-во месяцев подписки для пользователя\n\n🕒 Бессрочная подписка - 1111:", reply_markup=keyboard)
+    await EditUser.subscribe.set()
+
+
+async def edit_user_subscribe_set(message: types.Message, state):
+    pattern = r'^\d+$'
+    if not re.match(pattern, message.text):
+        await message.answer('😔 Вы указали не число! Попробуйте еще раз:')
+        await EditUser.subscribe.set()
+        return
+    keyboard = InlineKeyboardMarkup()
+    async with state.proxy() as data:
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'),
+                     InlineKeyboardButton(text='↩ Назад', callback_data=f"rusers_list-y-{data['user_db_id']}-1"))
+        user = users.find_one({'_id': ObjectId(data['user_db_id'])})
+        if user['subscribe'] == 0:
+            banned_users.discard(user['user_id'])
+            try:
+                await bot.unban_chat_member(CHAT, user['user_id'])
+            except:
+                pass
+            try:
+                await bot.unban_chat_member(CHANNEL, user['user_id'])
+            except:
+                pass
+        users.update_one(user, {'$set': {'subscribe': int(message.text)}})
+
+        await message.answer("💰 Срок подписки изменен:", reply_markup=keyboard)
+        await send_log(f"Администратор[{message.from_user.id}]: Пользователь[{data['user_db_id']}] <- {message.text} подписка")
+    await Menu.main.set()
+
+
+
 async def delete_user(callback: types.CallbackQuery, state):
     keyboard = InlineKeyboardMarkup()
     user = callback.data.split(sep='%')[1]
@@ -332,7 +410,7 @@ async def delete_user_set(message: types.Message, state):
             banned_users.discard(int(message.text))
             if user['user_id'] in admins and user['description'] == 'АДМИНИСТРАТОР':
                 await message.answer('😂 Администратор удален')
-            else:
+            elif user['user_id'] in admins:
                 admins.discard(int(message.text))
                 await message.answer('😁 Администратор разжалован')
                 return
@@ -371,7 +449,7 @@ async def notify_users_send(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton('🏠 В меню', callback_data='menu'))
     await send_log(f"Пользователи -> [Рассылка] <- {message.text}")
-    await message.answer(f'📤 Рассылка:\n 👍 Отправлено: {send}\n 👎 Заблокировано:{blocked}', reply_markup=keyboard)
+    await message.answer(f'📤 Рассылка:\n 👍 Отправлено: {send}\n 👎 Заблокировано: {blocked}', reply_markup=keyboard)
 
 
 async def notify_user(callback: types.CallbackQuery, state: FSMContext):
@@ -396,7 +474,7 @@ async def notify_user_send(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton('В меню', callback_data='menu'))
     await send_log(f"Пользователь[{user['user_id']}] -> [Рассылка] <- {message.text}")
-    await message.answer(f'📤 Рассылка:\n 👍 Отправлено: {send}\n 👎 Заблокировано:{blocked}', reply_markup=keyboard)
+    await message.answer(f'📤 Рассылка:\n 👍 Отправлено: {send}\n 👎 Заблокировано: {blocked}', reply_markup=keyboard)
 
     await state.finish()
 

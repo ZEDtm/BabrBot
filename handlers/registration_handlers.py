@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 
 from config import LOG_CHAT, bot, wait_registration, admins
-from database.collection import users
+from database.collection import users, preusers
 from database.models import User
 from modules.bot_states import Registration
 
@@ -16,9 +16,30 @@ from modules.logger import send_log
 
 async def registration_send(message: types.Message, state: FSMContext):
     remove_keyboard = types.ReplyKeyboardRemove()
+    pre_user = preusers.find_one({'phone_number': message.contact.phone_number})
+    if pre_user:
+        user = User(user_id=int(message.from_user.id),
+                    telegram_first_name=message.from_user.first_name,
+                    telegram_last_name=message.from_user.last_name,
+                    telegram_user_name=message.from_user.username,
+                    full_name=pre_user['full_name'],
+                    phone_number=message.contact.phone_number,
+                    description=pre_user['description'],
+                    image=pre_user['image'],
+                    video='',
+                    company_name=pre_user['company_name'],
+                    company_site=pre_user['company_site'],
+                    subscribe=0)
+        user = users.insert_one(user())
+        preusers.delete_one(pre_user)
+        await send_log(f"Пользователь[{message.contact.phone_number}] -> Пользователь[{message.from_user.id}]")
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
+        await message.answer('😁 Вы найдены в базе! Добро пожаловать!', reply_markup=keyboard)
+        return
+
     wait_registration.add(message.from_user.id)
-    await message.delete_reply_markup()
-    await message.reply("Ваша заявка на регистрацию успешно отправлена, ее рассмотрят в ближайшее время!", reply_markup=remove_keyboard)
+    await message.reply("😊 Извините, но я не нашел Вас в своей базе.. Ваша заявка на регистрацию успешно отправлена администраторам, ее рассмотрят в ближайшее время!", reply_markup=remove_keyboard)
 
     user = User(user_id=int(message.from_user.id),
                 telegram_first_name=message.from_user.first_name,
@@ -28,11 +49,10 @@ async def registration_send(message: types.Message, state: FSMContext):
                 phone_number=message.contact.phone_number,
                 description='',
                 image='',
+                video='',
                 company_name='',
                 company_site='',
-                subscribe_year=datetime.now().year,
-                subscribe_month=datetime.now().month,
-                subscribe_day=datetime.now().day)
+                subscribe=0)
     user = users.insert_one(user())
 
     keyboard = InlineKeyboardMarkup()
@@ -48,9 +68,3 @@ async def registration_send(message: types.Message, state: FSMContext):
         await bot.send_message(admin, text, reply_markup=keyboard)
 
     await send_log(f"Пользователь[{message.from_user.id}] -> Заявка")
-
-
-
-
-
-

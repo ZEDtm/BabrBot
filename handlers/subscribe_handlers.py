@@ -1,6 +1,8 @@
 import asyncio
+import json
 import logging
 import re
+import uuid
 from datetime import datetime, timedelta
 from os import path, listdir
 
@@ -8,6 +10,7 @@ import handlers.main_handlers
 from database.collection import events, find_event, archive, payments, users
 from database.models import Payment
 from modules.bot_states import Menu, EventSubscribe
+from modules.payment_module import create_payment, create_b2b_payment, create_card_payment
 from config import DIR, bot, LOG_CHAT, YOUKASSA, banned_users, subscribe_amount, CHANNEL, CHAT
 from bson import ObjectId
 
@@ -15,7 +18,6 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.dispatcher import FSMContext
 
-from modules.bot_calendar_module import EventCalendar
 from modules.logger import send_log
 
 
@@ -96,14 +98,27 @@ async def event_payment_receipt(callback: types.CallbackQuery, state: FSMContext
                 amount += int(price)
                 continue
             services += '0'
+
+        payload = f"event-sub%{callback.from_user.id}%{data['event_id']}%{services}"
         if amount > 0:
-            await bot.send_invoice(callback.from_user.id,
-                                   title=title,
-                                   description=description,
-                                   payload=f"event-sub%{callback.from_user.id}%{data['event_id']}%{services}",
-                                   provider_token=YOUKASSA,
-                                   currency='RUB',
-                                   prices=prices)
+            payment_url = await create_payment(amount, description, payload)
+            card_payment_url = await create_card_payment(amount, description, payload)
+            # b2b_payment_url = await create_b2b_payment(amount, description, payload)
+
+            keyboard = InlineKeyboardMarkup()
+            keyboard.add(InlineKeyboardButton('СберБанк', url=payment_url))
+            keyboard.add(InlineKeyboardButton('Банковская карта', url=card_payment_url))
+            # keyboard.add(InlineKeyboardButton('B2B', url=b2b_payment_url))
+
+            await callback.message.answer('Оплата', reply_markup=keyboard)
+            await callback.message.delete()
+            # await bot.send_invoice(callback.from_user.id,
+            #                        title=title,
+            #                        description=description,
+            #                        payload=f"event-sub%{callback.from_user.id}%{data['event_id']}%{services}",
+            #                        provider_token=YOUKASSA,
+            #                        currency='RUB',
+            #                        prices=prices)
         else:
             await event_free_checkout(callback, state, data['event_id'], services, amount)
 
@@ -175,16 +190,29 @@ async def event_payment_checkout(message: types.Message, state: FSMContext):
 
 async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMContext):
     months = int(callback.data.split(sep='%')[1])
-    amount = months * (subscribe_amount[0])*100
+    amount = months * (subscribe_amount[0])
+    description = f'Оформление подписки на {months} месяц.'
+    payload = f"user-sub%{callback.from_user.id}%{months}"
 
-    await bot.send_invoice(callback.from_user.id,
-                           title='Подписка на БАБР',
-                           description=f'Оформление подписки на {months} месяц.',
-                           payload=f"user-sub%{callback.from_user.id}%{months}",
-                           provider_token=YOUKASSA,
-                           currency='RUB',
-                           prices=[{'label': 'Подписка на БАБР', 'amount': amount}])
+    payment_url = await create_payment(amount, description, payload)
+    card_payment_url = await create_card_payment(amount, description, payload)
+    #b2b_payment_url = await create_b2b_payment(amount, description, payload)
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton('СберБанк', url=payment_url))
+    keyboard.add(InlineKeyboardButton('Банковская карта', url=card_payment_url))
+    #keyboard.add(InlineKeyboardButton('B2B', url=b2b_payment_url))
+
+    await callback.message.answer('Оплата', reply_markup=keyboard)
     await callback.message.delete()
+    # await bot.send_invoice(callback.from_user.id,
+    #                        title='Подписка на БАБР',
+    #                        description=f'Оформление подписки на {months} месяц.',
+    #                        payload=f"user-sub%{callback.from_user.id}%{months}",
+    #                        provider_token=YOUKASSA,
+    #                        currency='RUB',
+    #                        prices=[{'label': 'Подписка на БАБР', 'amount': amount}])
+    # await callback.message.delete()
 
 
 async def subscribe_payment_checkout(message: types.Message, state: FSMContext):

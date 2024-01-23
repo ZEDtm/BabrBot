@@ -23,6 +23,8 @@ from aiogram.utils.executor import start_webhook
 
 from modules.logger import send_log
 
+from app import app
+
 WEBHOOK_HOST = 'https://zed228.alwaysdata.net/'
 WEBHOOK_PATH = ''
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
@@ -794,6 +796,7 @@ async def non_state(message):
 
 
 async def on_startup(dp):
+    app.run('localhost', 5001, debug=True)
     await bot.set_webhook(WEBHOOK_URL)
     conf = db_config.find_one({'_id': ObjectId('659c6a3d1e2c9f558337a9b2')})
     subscribe_amount.append(conf['SUBSCRIBE_AMOUNT'][0])
@@ -824,5 +827,5 @@ async def on_shutdown(dp):
 
 if __name__ == '__main__':
     loop.create_task(loop_handler.spreader())
-    #executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)
-    start_webhook(dispatcher=dp, webhook_path=WEBHOOK_PATH, on_startup=on_startup, on_shutdown=on_shutdown, skip_updates=True, host=WEBAPP_HOST, port=WEBAPP_PORT)
+    executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)
+    #start_webhook(dispatcher=dp, webhook_path=WEBHOOK_PATH, on_startup=on_startup, on_shutdown=on_shutdown, skip_updates=True, host=WEBAPP_HOST, port=WEBAPP_PORT)

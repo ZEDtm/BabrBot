@@ -12,7 +12,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 async def spreader():
     loop.create_task(events_to_archive())
     loop.create_task(notification())
-    #oop.create_task(check_subscribe())
+    loop.create_task(check_subscribe(True))
     while True:
         await send_log('Бот -> Планирование задач')
         year, month, day, hour = datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour
@@ -25,7 +25,7 @@ async def spreader():
             await send_log('Бот -> Планирование задач -> Уведомления о мероприятиях')
             #loop.create_task(check_subscribe())
             loop.create_task(notification())
-        if day == 22 and hour == 8 or day == 1 and hour == 18:
+        if day == 22 and hour == 8 or day == 23 and hour == 18:
             await send_log('Бот -> Планирование задач -> Проверка подписок')
             loop.create_task(check_subscribe())
         if day == 23 and hour == 0:

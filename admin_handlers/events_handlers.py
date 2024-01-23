@@ -55,8 +55,8 @@ async def event_handle(callback: types.CallbackQuery, state: FSMContext, event_i
     keyboard.add(InlineKeyboardButton(text='✏ Стоимость', callback_data=f"event-edit-price%{event_id}"),
                  InlineKeyboardButton(text='✏ Услуги', callback_data=f"event-edit-services%{event_id}"))
     keyboard.add(InlineKeyboardButton(text='✏ Время, дата, длительность', callback_data=f"event-edit-date%{event_id}"))
-    keyboard.add(InlineKeyboardButton(text='👥 Участники', callback_data=f"event-users%{event_id}"),
-                 InlineKeyboardButton(text='❌ Удалить', callback_data=f"event-delete%{event_id}"))
+    keyboard.add(InlineKeyboardButton(text='❌ Удалить', callback_data=f"event-delete%{event_id}"),
+                 InlineKeyboardButton(text='👥 Участники', callback_data=f"event-users%{event_id}"),)
     if current_page:
         keyboard.add(InlineKeyboardButton(text='🏠 В Меню', callback_data=f"menu"),
                      InlineKeyboardButton(text='↩ Назад', callback_data=f"events_list-n-{current_page}"))

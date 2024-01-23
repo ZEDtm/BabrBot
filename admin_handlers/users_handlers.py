@@ -427,14 +427,14 @@ async def delete_user_set(message: types.Message, state):
     await handlers.main_handlers.start(message)
 
 
-async def notify_users(callback: types.CallbackQuery, state: FSMContext):
+async def notify_all_users(callback: types.CallbackQuery, state: FSMContext):
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton('🏠 В меню', callback_data='menu'))
     await Menu.admin_notify.set()
     await callback.message.edit_text('📥 Напишите текст для оповещения:', reply_markup=keyboard)
 
 
-async def notify_users_send(message: types.Message, state: FSMContext):
+async def notify_all_users_send(message: types.Message, state: FSMContext):
     users_data = users.find()
     send = 0
     blocked = 0

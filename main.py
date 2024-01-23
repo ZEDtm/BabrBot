@@ -240,18 +240,20 @@ async def archive_selected_video(callback: types.CallbackQuery, state: FSMContex
 
 
 # АДМИНКА
-@dp.callback_query_handler(lambda callback: 'notify-e-users' in callback.data, chat_type=types.ChatType.PRIVATE, state='*')
-async def notify_users(callback: types.CallbackQuery, state: FSMContext):
-    await admin_handlers.events_handlers.notify_users(callback, state)
+@dp.callback_query_handler(lambda callback: 'notify-all-users' == callback.data, chat_type=types.ChatType.PRIVATE, state='*')
+async def notify_all_users(callback: types.CallbackQuery, state: FSMContext):
+    print(callback.data)
+    await admin_handlers.users_handlers.notify_all_users(callback, state)
 
 
 @dp.message_handler(chat_type=types.ChatType.PRIVATE, state=Menu.admin_notify)
-async def notify_users_send(message: types.Message, state: FSMContext):
-    await admin_handlers.events_handlers.notify_users_send(message, state)
+async def notify_all_users_send(message: types.Message, state: FSMContext):
+    await admin_handlers.users_handlers.notify_all_users_send(message, state)
 #Пользователи
 
 @dp.callback_query_handler(lambda callback: 'notify-user' in callback.data, chat_type=types.ChatType.PRIVATE, state='*')
 async def notify_user(callback: types.CallbackQuery, state: FSMContext):
+    print(callback.data)
     await admin_handlers.users_handlers.notify_user(callback, state)
 
 
@@ -658,7 +660,7 @@ async def user_del_event(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.events_handlers.user_del_event(callback, state)
 
 
-@dp.callback_query_handler(lambda callback: 'notify-users' in callback.data, chat_type=types.ChatType.PRIVATE, state=UsersInEvent.list)
+@dp.callback_query_handler(lambda callback: 'notify-e-users' in callback.data, chat_type=types.ChatType.PRIVATE, state=UsersInEvent.list)
 async def notify_users(callback: types.CallbackQuery, state: FSMContext):
     await admin_handlers.events_handlers.notify_users(callback, state)
 
@@ -801,6 +803,7 @@ async def on_startup(dp):
         wait_registration.add(user)
     for user in conf['admins']:
         admins.add(user)
+    await send_log(f'Бот -> webhook -> Удалить')
     # insert code here to run it after start
 
 
@@ -810,7 +813,7 @@ async def on_shutdown(dp):
                  'wait_registration': [user for user in wait_registration],
                  'admins': [user for user in admins],
                  'SUBSCRIBE_AMOUNT': subscribe_amount}})
-    logging.warning('Shutting down..')
+    await send_log('Бот -> webhook -> Удалить')
     await bot.delete_webhook()
     await dp.storage.close()
     await dp.storage.wait_closed()

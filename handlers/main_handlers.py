@@ -33,7 +33,7 @@ async def start(message: types.Message):
                  InlineKeyboardButton(text="🗄️ Архив", callback_data='admin_archive'))
         menu.add(InlineKeyboardButton(text="👥 Группы", callback_data='list-users'),
                  InlineKeyboardButton(text="🏘️ Резиденты", callback_data='list-residents'))
-        menu.add(InlineKeyboardButton(text="📢 Сообщение резидентам", callback_data='notify-users'))
+        menu.add(InlineKeyboardButton(text="📢 Сообщение резидентам", callback_data='notify-all-users'))
         menu.add(InlineKeyboardButton(text="💰 Цена подписки", callback_data='subscribe-amount'))
         await Menu.main.set()
         await message.answer(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
@@ -85,7 +85,7 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
                  InlineKeyboardButton(text="🗄️ Архив", callback_data='admin_archive'))
         menu.add(InlineKeyboardButton(text="👥 Группы", callback_data='list-users'),
                  InlineKeyboardButton(text="🏘️ Резиденты", callback_data='list-residents'))
-        menu.add(InlineKeyboardButton(text="📢 Сообщение резидентам", callback_data='notify-users'))
+        menu.add(InlineKeyboardButton(text="📢 Сообщение резидентам", callback_data='notify-all-users'))
         menu.add(InlineKeyboardButton(text="💰 Цена подписки", callback_data='subscribe-amount'))
         await Menu.main.set()
         await callback.message.edit_text(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)

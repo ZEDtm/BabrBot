@@ -99,7 +99,7 @@ async def event_payment_receipt(callback: types.CallbackQuery, state: FSMContext
                 continue
             services += '0'
 
-        payload = f"event-sub%{callback.from_user.id}%{data['event_id']}%{services}"
+        payload = {"trigger": f"event-sub%{callback.from_user.id}%{data['event_id']}%{services}"}
         if amount > 0:
             payment_url = await create_payment(amount, description, payload)
             card_payment_url = await create_card_payment(amount, description, payload)
@@ -155,9 +155,11 @@ async def event_free_checkout(callback: types.CallbackQuery, state: FSMContext, 
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")
 
 
-async def event_payment_checkout(message: types.Message, state: FSMContext):
-    event_id = message.successful_payment.invoice_payload.split(sep='%')[2]
-    services = list(message.successful_payment.invoice_payload.split(sep='%')[3])
+async def event_payment_checkout(payment):
+    trigger = payment['metadata']['trigger']
+    user_id = int(trigger.split(sep='%')[1])
+    event_id = trigger.split(sep='%')[2]
+    services = list(trigger.split(sep='%')[3])
     event = events.find_one({'_id': ObjectId(event_id)})
     info = [{'label': f"Участие в {event['name']}", 'amount': int(event['price'])}]
     for service, price, select in zip(event['service_description'], event['service_price'], services):
@@ -165,13 +167,13 @@ async def event_payment_checkout(message: types.Message, state: FSMContext):
             info.append({'label': service, 'amount': int(price)})
     date = datetime.now()
 
-    payment = Payment(user_id=message.from_user.id,
+    payment = Payment(user_id=user_id,
                       binding=event_id,
                       info=info,
-                      total_amount=message.successful_payment.total_amount / 100,
-                      invoice_payload=message.successful_payment.invoice_payload,
-                      telegram_payment_charge_id=message.successful_payment.telegram_payment_charge_id,
-                      provider_payment_charge_id=message.successful_payment.provider_payment_charge_id,
+                      total_amount=payment['amount']['value'],
+                      invoice_payload=trigger,
+                      telegram_payment_charge_id='YOOKASSA',
+                      provider_payment_charge_id=payment['id'],
                       year=date.year,
                       month=date.month,
                       day=date.day,
@@ -179,10 +181,10 @@ async def event_payment_checkout(message: types.Message, state: FSMContext):
                       minute=date.minute,
                       second=date.second)
     new_payment = payments.insert_one(payment())
-    await payment_info(message.from_user.id, str(new_payment.inserted_id))
+    await payment_info(user_id, str(new_payment.inserted_id))
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)
 
-    events.update_one({'_id': ObjectId(event_id)}, {'$set': {'users': [message.from_user.id]}})
+    events.update_one({'_id': ObjectId(event_id)}, {'$set': {'users': [user_id]}})
 
 
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")
@@ -192,7 +194,7 @@ async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMCon
     months = int(callback.data.split(sep='%')[1])
     amount = months * (subscribe_amount[0])
     description = f'Оформление подписки на {months} месяц.'
-    payload = f"user-sub%{callback.from_user.id}%{months}"
+    payload = {"trigger": f"user-sub%{callback.from_user.id}%{months}"}
 
     payment_url = await create_payment(amount, description, payload)
     card_payment_url = await create_card_payment(amount, description, payload)
@@ -215,9 +217,10 @@ async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMCon
     # await callback.message.delete()
 
 
-async def subscribe_payment_checkout(message: types.Message, state: FSMContext):
-    user_id = int(message.successful_payment.invoice_payload.split(sep='%')[1])
-    months = int(message.successful_payment.invoice_payload.split(sep='%')[2])
+async def subscribe_payment_checkout(payment):
+    trigger = payment['metadata']['trigger']
+    user_id = int(trigger.split(sep='%')[1])
+    months = int(trigger.split(sep='%')[2])
     user = users.find_one({'user_id': user_id})
     new_subscribe = user['subscribe'] + months
     await send_log(f'Пользователь[{user_id}] -> Подписка <- {new_subscribe}')
@@ -236,13 +239,13 @@ async def subscribe_payment_checkout(message: types.Message, state: FSMContext):
 
     now = datetime.now()
 
-    payment = Payment(user_id=message.from_user.id,
+    payment = Payment(user_id=user_id,
                       binding=user['user_id'],
-                      info=[{'label': f'Подписка на {months} месяц.', 'amount': message.successful_payment.total_amount / 100}],
-                      total_amount=message.successful_payment.total_amount / 100,
-                      invoice_payload=message.successful_payment.invoice_payload,
-                      telegram_payment_charge_id=message.successful_payment.telegram_payment_charge_id,
-                      provider_payment_charge_id=message.successful_payment.provider_payment_charge_id,
+                      info=[{'label': f'Подписка на {months} месяц.', 'amount': payment['amount']['value']}],
+                      total_amount=payment['amount']['value'],
+                      invoice_payload=trigger,
+                      telegram_payment_charge_id='YOKASSA',
+                      provider_payment_charge_id=payment['id'],
                       year=now.year,
                       month=now.month,
                       day=now.day,
@@ -250,7 +253,7 @@ async def subscribe_payment_checkout(message: types.Message, state: FSMContext):
                       minute=now.minute,
                       second=now.second)
     new_payment = payments.insert_one(payment())
-    await payment_info(message.from_user.id, str(new_payment.inserted_id))
+    await payment_info(user_id, str(new_payment.inserted_id))
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)
 
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")

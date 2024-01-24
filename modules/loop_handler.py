@@ -1,5 +1,7 @@
 
 from datetime import datetime, timedelta
+
+
 from config import loop, bot, banned_users, wait_registration, admins, referral_link, CHANNEL, CHAT
 import asyncio
 
@@ -12,7 +14,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 async def spreader():
     loop.create_task(events_to_archive())
     loop.create_task(notification())
-    loop.create_task(check_subscribe(True))
+    #loop.create_task(check_subscribe(True))
     while True:
         await send_log('Бот -> Планирование задач')
         year, month, day, hour = datetime.now().year, datetime.now().month, datetime.now().day, datetime.now().hour
@@ -25,10 +27,10 @@ async def spreader():
             await send_log('Бот -> Планирование задач -> Уведомления о мероприятиях')
             #loop.create_task(check_subscribe())
             loop.create_task(notification())
-        if day == 22 and hour == 8 or day == 23 and hour == 18:
+        if day == 1 and hour == 8 or day == 1 and hour == 18:
             await send_log('Бот -> Планирование задач -> Проверка подписок')
             loop.create_task(check_subscribe())
-        if day == 23 and hour == 0:
+        if day == 2 and hour == 0:
             await send_log('Бот -> Планирование задач -> Проверка подписок -> Блокировка доступа')
             loop.create_task(check_subscribe(True))
         await asyncio.sleep(3600)
@@ -72,7 +74,7 @@ async def notification():
 async def events_to_archive():
     for event in events.find():
         date = datetime(int(event['year']), int(event['month']), int(event['day']), int(event['hour']), int(event['minute']))
-        if date + timedelta(days=event['duration']) == datetime.now():
+        if date + timedelta(days=event['duration']) < datetime.now():
             if event['public']:
                 event_to_archive = Archive(
                     name=event['name'],

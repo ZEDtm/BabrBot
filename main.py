@@ -1,9 +1,11 @@
 import re
 from datetime import datetime
 
+from aiohttp import web
 from bson import ObjectId
 
 import handlers.calendar_handlers
+import modules.payment_module
 from database.collection import db_config, events, users
 from modules import loop_handler
 
@@ -22,8 +24,6 @@ from admin_handlers import new_event_handlers
 from aiogram.utils.executor import start_webhook
 
 from modules.logger import send_log
-
-from app import app
 
 WEBHOOK_HOST = 'https://zed228.alwaysdata.net/'
 WEBHOOK_PATH = ''
@@ -61,6 +61,9 @@ async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMCon
 #  СТРАРТ
 @dp.message_handler(lambda message: message.from_user.id in banned_users, chat_type=types.ChatType.PRIVATE, state='*')
 async def handle_banned(message: types.Message):
+    if len(message.text) > 6:
+        payment_id = message.text.split()
+        loop.create_task(modules.payment_module.check_payment(payment_id))
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(types.InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"),
                  types.InlineKeyboardButton(text='🎫 Оформить на 3 месяца', callback_data=f"user-subscribe%3"),
@@ -796,8 +799,6 @@ async def non_state(message):
 
 
 async def on_startup(dp):
-    app.run('localhost', 5001, debug=True)
-    await bot.set_webhook(WEBHOOK_URL)
     conf = db_config.find_one({'_id': ObjectId('659c6a3d1e2c9f558337a9b2')})
     subscribe_amount.append(conf['SUBSCRIBE_AMOUNT'][0])
     for user in conf['banned_users']:

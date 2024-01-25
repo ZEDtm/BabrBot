@@ -11,7 +11,7 @@ from database.collection import events, find_event, archive, payments, users
 from database.models import Payment
 from modules.bot_states import Menu, EventSubscribe
 from modules.payment_module import create_payment, create_b2b_payment, create_card_payment
-from config import DIR, bot, LOG_CHAT, YOUKASSA, banned_users, subscribe_amount, CHANNEL, CHAT
+from config import DIR, bot, LOG_CHAT, banned_users, subscribe_amount, CHANNEL, CHAT
 from bson import ObjectId
 
 from aiogram import types

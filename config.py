@@ -13,8 +13,9 @@ load_dotenv()
 TOKEN = getenv('TOKEN')
 MONGO_LOGIN = getenv('MONGO_LOGIN')
 MONGO_PASS = getenv('MONGO_PASS')
-YOUKASSA = getenv('YOUKASSA')
-
+YOOKASSA = getenv('YOOKASSA')
+YOOKASSA_account_id = getenv('YOKASSA_account_id')
+YOKASSA_secret_key = getenv('YOKASSA_secret_key')
 
 
 LOG_CHAT = getenv('LOG_CHAT')

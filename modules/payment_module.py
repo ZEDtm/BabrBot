@@ -4,11 +4,11 @@ from yookassa import Configuration, Payment
 import json
 
 import handlers
-from config import loop
+from config import loop, YOOKASSA_account_id, YOKASSA_secret_key
 from modules.logger import send_log
 
-Configuration.account_id = "301255"#"301766"
-Configuration.secret_key = "test_2ZNhGkP1iW9oN8d1S8kaJPbmYRaCcw6KdZu_HPXZ9xQ" #live_APTcp0tYEZDrSIi2p5fQDZCkAnZTZrTM4ke_jXmr47o
+Configuration.account_id = YOOKASSA_account_id
+Configuration.secret_key = YOKASSA_secret_key
 
 # payment_method_data = [{'name': "Банковская карта", 'method': "bank_card"},
 #                            {'name': "YooMoney", 'method': "yoo_money"},

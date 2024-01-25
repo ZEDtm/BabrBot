@@ -1,6 +1,5 @@
 import re
 from datetime import datetime
-
 from aiohttp import web
 from bson import ObjectId
 
@@ -744,6 +743,17 @@ async def archive_add_link_set(message: types.Message, state: FSMContext):
     await admin_handlers.archive_handlers.archive_add_link_set(message, state)
 
 
+@dp.message_handler(commands=['prereg'], chat_type=types.ChatType.PRIVATE, state='*')
+async def prereg_handler(message):
+    from database.collection import preusers
+    prereg_data = preusers.find()
+    if prereg_data:
+        text = 'Ожидает подтверждения регистрации:\n\n'
+        for user in prereg_data:
+            text += f"{user['full_name']}\n{user['phone_number']}\n{user['description']}\n{user['company_name']}\n\n"
+        await message.answer(text)
+    else:
+        await message.answer('Пусто')
 
 
 @dp.message_handler(commands=['events'], chat_type=types.ChatType.SUPERGROUP, state='*')

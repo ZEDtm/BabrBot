@@ -14,8 +14,8 @@ TOKEN = getenv('TOKEN')
 MONGO_LOGIN = getenv('MONGO_LOGIN')
 MONGO_PASS = getenv('MONGO_PASS')
 YOOKASSA = getenv('YOOKASSA')
-YOOKASSA_account_id = getenv('YOKASSA_account_id')
-YOKASSA_secret_key = getenv('YOKASSA_secret_key')
+YOOKASSA_account_id = "301766"
+YOKASSA_secret_key = "live_APTcp0tYEZDrSIi2p5fQDZCkAnZTZrTM4ke_jXmr47o"
 
 
 LOG_CHAT = getenv('LOG_CHAT')

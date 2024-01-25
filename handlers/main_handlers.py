@@ -45,8 +45,8 @@ async def start(message: types.Message):
         menu.add(InlineKeyboardButton(text="🌟 Профиль", callback_data='profile'))
         menu.add(InlineKeyboardButton(text="📅 Календарь", callback_data='calendar_handler'))
         menu.add(InlineKeyboardButton(text="🏘️ Резиденты", callback_data='list-residents'))
-        menu.add(InlineKeyboardButton(text='🎥 Видео Babr', url='https://disk.yandex.ru/d/_1G5zkyCbW5t3Q'),
-                 InlineKeyboardButton(text='👍 Полезные ссылки', url='https://docs.google.com/spreadsheets/d/1BdqC6wMGKos8AxQrwobNbspLGhPB8x9-mhqfgfDAE6s/edit?usp=sharing'))
+        menu.add(InlineKeyboardButton(text='🎥 Видео Babr', url='https://disk.yandex.ru/d/_1G5zkyCbW5t3Q'))
+        menu.add(InlineKeyboardButton(text='👍 Полезные ссылки', url='https://docs.google.com/spreadsheets/d/1BdqC6wMGKos8AxQrwobNbspLGhPB8x9-mhqfgfDAE6s/edit?usp=sharing'))
         menu.add(InlineKeyboardButton(text='📣 Наш канал', url=link_channel),
                  InlineKeyboardButton(text='💬 Наш чат', url=link_chat))
 
@@ -97,8 +97,8 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
         menu.add(InlineKeyboardButton(text="🌟 Профиль", callback_data='profile'))
         menu.add(InlineKeyboardButton(text="📅 Календарь", callback_data='calendar_handler'))
         menu.add(InlineKeyboardButton(text="🏘️ Резиденты", callback_data='list-residents'))
-        menu.add(InlineKeyboardButton(text='🎥 Видео Babr', url='https://disk.yandex.ru/d/_1G5zkyCbW5t3Q'),
-                 InlineKeyboardButton(text='👍 Полезные ссылки',
+        menu.add(InlineKeyboardButton(text='🎥 Видео Babr', url='https://disk.yandex.ru/d/_1G5zkyCbW5t3Q'))
+        menu.add(InlineKeyboardButton(text='👍 Полезные ссылки',
                                       url='https://docs.google.com/spreadsheets/d/1BdqC6wMGKos8AxQrwobNbspLGhPB8x9-mhqfgfDAE6s/edit?usp=sharing'))
         menu.add(InlineKeyboardButton(text='📣 Наш канал', url=link_channel),
                  InlineKeyboardButton(text='💬 Наш чат', url=link_chat))

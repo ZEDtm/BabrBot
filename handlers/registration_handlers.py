@@ -16,7 +16,13 @@ from modules.logger import send_log
 
 async def registration_send(message: types.Message, state: FSMContext):
     remove_keyboard = types.ReplyKeyboardRemove()
-    pre_user = preusers.find_one({'phone_number': message.contact.phone_number})
+    if len(message.contact.phone_number):
+        phone = message.contact.phone_number.split(sep='+')[1]
+    elif message.contact.phone_number[0] == '8':
+        phone = '7' + message.contact.phone_number[1::1]
+    else:
+        phone = message.contact.phone_number
+    pre_user = preusers.find_one({'phone_number': phone})
     if pre_user:
         user = User(user_id=int(message.from_user.id),
                     telegram_first_name=message.from_user.first_name,
@@ -30,12 +36,13 @@ async def registration_send(message: types.Message, state: FSMContext):
                     company_name=pre_user['company_name'],
                     company_site=pre_user['company_site'],
                     subscribe=0)
-        user = users.insert_one(user())
+        users.insert_one(user())
         preusers.delete_one(pre_user)
         await send_log(f"Пользователь[{message.contact.phone_number}] -> Пользователь[{message.from_user.id}]")
         keyboard = InlineKeyboardMarkup()
         keyboard.add(InlineKeyboardButton(text='🏠 В меню', callback_data='menu'))
-        await message.answer('😁 Вы найдены в базе! Добро пожаловать!', reply_markup=keyboard)
+        await message.answer('😁 Вы найдены в базе!', reply_markup=remove_keyboard)
+        await message.answer('Добро пожаловать в "БАБР" 🐈‍⬛!', reply_markup=keyboard)
         return
 
     wait_registration.add(message.from_user.id)

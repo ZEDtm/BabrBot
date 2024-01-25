@@ -101,9 +101,9 @@ async def event_payment_receipt(callback: types.CallbackQuery, state: FSMContext
 
         payload = {"trigger": f"event-sub%{callback.from_user.id}%{data['event_id']}%{services}"}
         if amount > 0:
-            payment_url = await create_payment(amount, description, payload)
-            card_payment_url = await create_card_payment(amount, description, payload)
-            # b2b_payment_url = await create_b2b_payment(amount, description, payload)
+            payment_url = await create_payment(amount, title, payload)
+            card_payment_url = await create_card_payment(amount, title, payload)
+            # b2b_payment_url = await create_b2b_payment(amount, title, payload)
 
             keyboard = InlineKeyboardMarkup()
             keyboard.add(InlineKeyboardButton('СберБанк', url=payment_url))

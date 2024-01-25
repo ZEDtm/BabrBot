@@ -74,7 +74,7 @@ async def notification():
 async def events_to_archive():
     for event in events.find():
         date = datetime(int(event['year']), int(event['month']), int(event['day']), int(event['hour']), int(event['minute']))
-        if date + timedelta(days=event['duration']) < datetime.now():
+        if date + timedelta(days=event['duration']) < datetime.now() + timedelta(hours=8):
             if event['public']:
                 event_to_archive = Archive(
                     name=event['name'],

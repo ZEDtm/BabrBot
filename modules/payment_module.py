@@ -7,8 +7,6 @@ import handlers
 from config import loop, YOOKASSA_account_id, YOKASSA_secret_key
 from modules.logger import send_log
 
-Configuration.account_id = YOOKASSA_account_id
-Configuration.secret_key = YOKASSA_secret_key
 
 # payment_method_data = [{'name': "Банковская карта", 'method': "bank_card"},
 #                            {'name': "YooMoney", 'method': "yoo_money"},
@@ -18,20 +16,21 @@ Configuration.secret_key = YOKASSA_secret_key
 
 
 async def create_payment(amount, description, payload):
-
+    Configuration.account_id = YOOKASSA_account_id
+    Configuration.secret_key = YOKASSA_secret_key
     payment = Payment.create({
         "amount": {
             "value": f"{amount}.00",
             "currency": "RUB"
         },
         "payment_method_data": {
-            #"type": "sberbank"
-            "type": "bank_card"
+             "type": "sberbank"
         },
         "confirmation": {
             "type": "redirect",
             "return_url": "https://t.me/BabrClub38Bot"
         },
+        "capture": True,
         "description": description,
         "metadata": payload,
     })
@@ -45,7 +44,8 @@ async def create_payment(amount, description, payload):
 
 
 async def create_card_payment(amount, description, payload):
-
+    Configuration.account_id = YOOKASSA_account_id
+    Configuration.secret_key = YOKASSA_secret_key
     payment = Payment.create({
         "amount": {
             "value": f"{amount}.00",
@@ -58,6 +58,7 @@ async def create_card_payment(amount, description, payload):
             "type": "redirect",
             "return_url": "https://t.me/BabrClub38Bot"
         },
+        "capture": True,
         "description": description,
         "metadata": payload,
     })
@@ -71,7 +72,8 @@ async def create_card_payment(amount, description, payload):
 
 
 async def create_b2b_payment(amount, description, payload):
-
+    Configuration.account_id = YOOKASSA_account_id
+    Configuration.secret_key = YOKASSA_secret_key
     payment = Payment.create({
         "amount": {
             "value": f"{amount}.00",
@@ -84,6 +86,7 @@ async def create_b2b_payment(amount, description, payload):
             "type": "redirect",
             "return_url": "https://t.me/BabrClub38Bot"
         },
+        "capture": True,
         "description": description,
         "metadata": payload,
     })
@@ -101,16 +104,13 @@ async def check_payment(payment_id):
     while payment['status'] == 'pending':
         payment = json.loads((Payment.find_one(payment_id)).json())
         await asyncio.sleep(10)
-    Payment.capture(payment_id)
-    while payment['status'] == 'waiting_for_capture':
-        payment = json.loads((Payment.find_one(payment_id)).json())
-        await asyncio.sleep(10)
+    payment = json.loads((Payment.find_one(payment_id)).json())
     if payment['status'] == 'succeeded':
         await send_log(f'Ответ -> {payment} -> Бот')
         if payment['metadata']['trigger'].split(sep='%')[0] == 'user-sub':
             await handlers.subscribe_handlers.subscribe_payment_checkout(payment)
         if payment['metadata']['trigger'].split(sep='%')[0] == 'event-sub':
             await handlers.subscribe_handlers.event_payment_checkout(payment)
-        return True
+            return True
     else:
         return False

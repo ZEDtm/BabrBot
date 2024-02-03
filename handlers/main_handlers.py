@@ -20,7 +20,6 @@ async def start(message: types.Message):
             referral_link.discard(message.text.split()[1])
             await send_log(f"Пользователь[{message.from_user.id}] -> Администратор")
 
-
     user = find_user(message.from_user.id)
     if message.from_user.id in admins:
         if not user:

@@ -6,7 +6,7 @@ from datetime import datetime
 
 
 import admin_handlers.events_handlers
-from config import dp, bot, DIR
+from config import bot, DIR
 from database.collection import events, archive
 from database.models import Event
 from modules.bot_states import AdminNewEvent, AdminArchive

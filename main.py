@@ -1,36 +1,29 @@
 import re
 from datetime import datetime
-from aiohttp import web
+
+from aiogram.types import Update
 from bson import ObjectId
 
 import handlers.calendar_handlers
 import modules.payment_module
 from database.collection import db_config, events, users
-from modules import loop_handler
 
 import admin_handlers.new_event_handlers
-from config import dp, logging, loop, bot, DIR, banned_users, wait_registration, referral_link, admins, \
-    subscribe_amount, CHAT, CHANNEL
+from config import logging, bot, DIR, banned_users, wait_registration, referral_link, admins, \
+    subscribe_amount, CHAT, CHANNEL, dp
 from modules.bot_states import Registration, Menu, ProfileEdit, AdminNewEvent, AdminArchive, EventSubscribe, \
     AdminEditEvent, EditUser, UsersInEvent, PreRegistration
 
-from aiogram import executor, types
+from aiogram import types
 from aiogram.dispatcher import FSMContext
 
 from handlers import main_handlers, registration_handlers, profile_handlers, calendar_handlers, residents_handlers
 from admin_handlers import new_event_handlers
 
-from aiogram.utils.executor import start_webhook
+
 
 from modules.logger import send_log
 
-WEBHOOK_HOST = 'https://zed228.alwaysdata.net/'
-WEBHOOK_PATH = ''
-WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
-
-# webserver settings
-WEBAPP_HOST = '::'  # or ip
-WEBAPP_PORT = 8350
 
 
 # ПОДПИСКА
@@ -60,9 +53,9 @@ async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMCon
 #  СТРАРТ
 @dp.message_handler(lambda message: message.from_user.id in banned_users, chat_type=types.ChatType.PRIVATE, state='*')
 async def handle_banned(message: types.Message):
-    if len(message.text) > 6:
-        payment_id = message.text.split()
-        loop.create_task(modules.payment_module.check_payment(payment_id))
+    #if len(message.text) > 6:
+        #payment_id = message.text.split()
+        #loop.create_task(modules.payment_module.check_payment(payment_id))
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(types.InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"),
                  types.InlineKeyboardButton(text='🎫 Оформить на 3 месяца', callback_data=f"user-subscribe%3"),
@@ -90,6 +83,9 @@ async def handle_banned(callback: types.CallbackQuery):
 async def start(message: types.Message):
     await main_handlers.start(message)
 
+@dp.message_handler(commands='start')
+async def start(message: types.Message):
+    print(message.chat.id)
 
 @dp.callback_query_handler(lambda callback: 'start-search' in callback.data, chat_type=types.ChatType.PRIVATE, state='*')
 async def start_search(callback: types.CallbackQuery, state: FSMContext):
@@ -814,16 +810,8 @@ async def non_state(message):
         await message.delete()
 
 
-async def on_startup(dp):
-    conf = db_config.find_one({'_id': ObjectId('659c6a3d1e2c9f558337a9b2')})
-    subscribe_amount.append(conf['SUBSCRIBE_AMOUNT'][0])
-    for user in conf['banned_users']:
-        banned_users.add(user)
-    for user in conf['wait_registration']:
-        wait_registration.add(user)
-    for user in conf['admins']:
-        admins.add(user)
-    await send_log(f'Бот -> webhook -> Удалить')
+async def on_startup():
+    pass
     # insert code here to run it after start
 
 
@@ -837,12 +825,3 @@ async def on_shutdown(dp):
     await bot.delete_webhook()
     await dp.storage.close()
     await dp.storage.wait_closed()
-
-    logging.warning('Bye!')
-
-
-
-if __name__ == '__main__':
-    loop.create_task(loop_handler.spreader())
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)
-    #start_webhook(dispatcher=dp, webhook_path=WEBHOOK_PATH, on_startup=on_startup, on_shutdown=on_shutdown, skip_updates=True, host=WEBAPP_HOST, port=WEBAPP_PORT)

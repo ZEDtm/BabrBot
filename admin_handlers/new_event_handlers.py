@@ -1,7 +1,6 @@
 import re
 
 import admin_handlers.events_handlers
-from config import dp
 from database.collection import events
 from database.models import Event
 from modules.bot_states import AdminNewEvent

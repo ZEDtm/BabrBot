@@ -10,7 +10,7 @@ event_calendar_callback = CallbackData('event_calendar', 'act', 'year', 'month',
 new_event_callback = CallbackData('new_event_calendar', 'act', 'year', 'month', 'day')
 admin_event_calendar_callback = CallbackData('admin_event_calendar', 'act', 'year', 'month', 'day')
 calendar_callback = CallbackData('new_event_calendar', 'act', 'year', 'month', 'day')
-months_names = ['', 'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
+months_names = ['', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
 
 
 class EventCalendar:
@@ -62,16 +62,8 @@ class EventCalendar:
         # First row - Month and Year
         inline_kb.row()
         inline_kb.insert(InlineKeyboardButton(
-            "⏮",
-            callback_data=event_calendar_callback.new("PREV-YEAR", year, month, 1, ' ')
-        ))
-        inline_kb.insert(InlineKeyboardButton(
-            f'🗓 {months_names[month]} {str(year)[2:4]}',
+            f'🗓 {months_names[month]} {str(year)}',
             callback_data=ignore_callback
-        ))
-        inline_kb.insert(InlineKeyboardButton(
-            "⏭",
-            callback_data=event_calendar_callback.new("NEXT-YEAR", year, month, 1, ' ')
         ))
         # Second row - Week Days
         inline_kb.row()

@@ -1,17 +1,11 @@
-import asyncio
-import json
-import logging
 import re
-import uuid
-from datetime import datetime, timedelta
-from os import path, listdir
+from datetime import datetime
 
-import handlers.main_handlers
-from database.collection import events, find_event, archive, payments, users
+from database.collection import events, payments, users
 from database.models import Payment
 from modules.bot_states import Menu, EventSubscribe
-from modules.payment_module import create_payment, create_b2b_payment, create_card_payment
-from config import DIR, bot, LOG_CHAT, banned_users, subscribe_amount, CHANNEL, CHAT
+from modules.payment_module import create_payment, create_card_payment
+from config import bot, LOG_CHAT, banned_users, subscribe_amount, CHANNEL, CHAT
 from bson import ObjectId
 
 from aiogram import types
@@ -110,15 +104,8 @@ async def event_payment_receipt(callback: types.CallbackQuery, state: FSMContext
             keyboard.add(InlineKeyboardButton('Банковская карта', url=card_payment_url))
             # keyboard.add(InlineKeyboardButton('B2B', url=b2b_payment_url))
 
-            await callback.message.answer('Оплата', reply_markup=keyboard)
+            await callback.message.answer(title, reply_markup=keyboard)
             await callback.message.delete()
-            # await bot.send_invoice(callback.from_user.id,
-            #                        title=title,
-            #                        description=description,
-            #                        payload=f"event-sub%{callback.from_user.id}%{data['event_id']}%{services}",
-            #                        provider_token=YOUKASSA,
-            #                        currency='RUB',
-            #                        prices=prices)
         else:
             await event_free_checkout(callback, state, data['event_id'], services, amount)
 
@@ -181,11 +168,10 @@ async def event_payment_checkout(payment):
                       minute=date.minute,
                       second=date.second)
     new_payment = payments.insert_one(payment())
-    await payment_info(user_id, str(new_payment.inserted_id))
+    await payment_info(str(user_id), str(new_payment.inserted_id))
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)
 
-    events.update_one({'_id': ObjectId(event_id)}, {'$set': {'users': [user_id]}})
-
+    events.update_one({'_id': ObjectId(event_id)}, {'$push': {'users': [user_id]}})
 
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")
 
@@ -205,16 +191,8 @@ async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMCon
     keyboard.add(InlineKeyboardButton('Банковская карта', url=card_payment_url))
     #keyboard.add(InlineKeyboardButton('B2B', url=b2b_payment_url))
 
-    await callback.message.answer('Оплата', reply_markup=keyboard)
+    await callback.message.answer(description, reply_markup=keyboard)
     await callback.message.delete()
-    # await bot.send_invoice(callback.from_user.id,
-    #                        title='Подписка на БАБР',
-    #                        description=f'Оформление подписки на {months} месяц.',
-    #                        payload=f"user-sub%{callback.from_user.id}%{months}",
-    #                        provider_token=YOUKASSA,
-    #                        currency='RUB',
-    #                        prices=[{'label': 'Подписка на БАБР', 'amount': amount}])
-    # await callback.message.delete()
 
 
 async def subscribe_payment_checkout(payment):
@@ -236,7 +214,6 @@ async def subscribe_payment_checkout(payment):
         pass
     await send_log(f'Пользователь[{user_id}] -> Доступ <- Канал, Чат, Бот')
 
-
     now = datetime.now()
 
     payment = Payment(user_id=user_id,
@@ -253,7 +230,7 @@ async def subscribe_payment_checkout(payment):
                       minute=now.minute,
                       second=now.second)
     new_payment = payments.insert_one(payment())
-    await payment_info(user_id, str(new_payment.inserted_id))
+    await payment_info(str(user_id), str(new_payment.inserted_id))
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)
 
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")

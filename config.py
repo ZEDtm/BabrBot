@@ -15,6 +15,13 @@ YOOKASSA = getenv('YOOKASSA')
 YOOKASSA_account_id = "301766"
 YOKASSA_secret_key = "live_APTcp0tYEZDrSIi2p5fQDZCkAnZTZrTM4ke_jXmr47o"
 
+HOST = getenv('WEBHOOK_HOST')
+WEBHOOK_PATH = getenv('WEBHOOK_PATH')
+WEBHOOK_URL = f"{HOST}{WEBHOOK_PATH}"
+PAYMENT_PATH = getenv('PAYMENT_PATH')
+PAYMENT_URL = f"{HOST}{PAYMENT_PATH}"
+
+
 LOG_CHAT = getenv('LOG_CHAT')
 CHAT = getenv('CHAT')
 CHANNEL = getenv('CHANNEL')

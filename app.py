@@ -56,7 +56,6 @@ async def webhook(request: Request):
         return {"status": "ok"}
 
 
-
 @app.post("/payments")
 async def payments(request: Request):
     payment = await request.json()

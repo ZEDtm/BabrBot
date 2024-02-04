@@ -24,7 +24,7 @@ async def create_payment(amount, description, payload):
             "currency": "RUB"
         },
         "payment_method_data": {
-             "type": "sberbank"
+            "type": "bank_card"
         },
         "confirmation": {
             "type": "redirect",
@@ -37,7 +37,6 @@ async def create_payment(amount, description, payload):
 
     payment_data = json.loads(payment.json())
     payment_id = payment_data['id']
-    loop.create_task(check_payment(payment_id))
     payment_url = (payment_data['confirmation'])['confirmation_url']
 
     return payment_url
@@ -65,7 +64,6 @@ async def create_card_payment(amount, description, payload):
 
     payment_data = json.loads(payment.json())
     payment_id = payment_data['id']
-    loop.create_task(check_payment(payment_id))
     payment_url = (payment_data['confirmation'])['confirmation_url']
 
     return payment_url
@@ -80,7 +78,7 @@ async def create_b2b_payment(amount, description, payload):
             "currency": "RUB"
         },
         "payment_method_data": {
-            "type": "b2b_sberbank"
+            "type": "bank_card"
         },
         "confirmation": {
             "type": "redirect",
@@ -93,24 +91,7 @@ async def create_b2b_payment(amount, description, payload):
 
     payment_data = json.loads(payment.json())
     payment_id = payment_data['id']
-    loop.create_task(check_payment(payment_id))
+    #loop.create_task(check_payment(payment_id))
     payment_url = (payment_data['confirmation'])['confirmation_url']
 
     return payment_url
-
-
-async def check_payment(payment_id):
-    payment = json.loads((Payment.find_one(payment_id)).json())
-    while payment['status'] == 'pending':
-        payment = json.loads((Payment.find_one(payment_id)).json())
-        await asyncio.sleep(10)
-    payment = json.loads((Payment.find_one(payment_id)).json())
-    if payment['status'] == 'succeeded':
-        await send_log(f'Ответ -> {payment} -> Бот')
-        if payment['metadata']['trigger'].split(sep='%')[0] == 'user-sub':
-            await handlers.subscribe_handlers.subscribe_payment_checkout(payment)
-        if payment['metadata']['trigger'].split(sep='%')[0] == 'event-sub':
-            await handlers.subscribe_handlers.event_payment_checkout(payment)
-            return True
-    else:
-        return False

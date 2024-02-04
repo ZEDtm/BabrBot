@@ -15,40 +15,17 @@ from pytz import timezone
 
 tz = timezone('Asia/Irkutsk')
 
+
 async def spreader():
     scheduler = AsyncIOScheduler(timezone=tz)
 
     scheduler.add_job(events_to_archive, 'cron', hour=23)
     scheduler.add_job(notification, 'cron', hour=8)
-    scheduler.add_job(check_subscribe, 'cron', day='L-2', hour=18)
-    scheduler.add_job(check_subscribe, 'cron', day='L-1', hour=18)
-    scheduler.add_job(check_subscribe, 'cron', day='L', hour=18)
+    scheduler.add_job(check_subscribe, 'cron', day='last', hour=8)
     scheduler.add_job(check_subscribe, 'cron', day=1, hour=8)
     scheduler.add_job(check_subscribe, 'cron', day=1, hour=18)
     scheduler.add_job(check_subscribe, 'cron', day=2, hour=0, args=[True])
-
-    loop.create_task(events_to_archive())
-    loop.create_task(notification())
-    #loop.create_task(check_subscribe(True))
-    # while True:
-    #     await send_log('Бот -> Планирование задач')
-    #     year, month, day, hour = datetime.now(tz).year, datetime.now(tz).month, datetime.now(tz).day, datetime.now(tz).hour
-    #     if hour == 15:
-    #         await send_log('Бот -> Планирование задач -> Проверка мероприятий')
-    #         loop.create_task(events_to_archive())
-    #         for link in referral_link:
-    #             referral_link.remove(link)
-    #     if hour == 0:
-    #         await send_log('Бот -> Планирование задач -> Уведомления о мероприятиях')
-    #         #loop.create_task(check_subscribe())
-    #         loop.create_task(notification())
-    #     if day == 1 and hour == 0 or day == 1 and hour == 10:
-    #         await send_log('Бот -> Планирование задач -> Проверка подписок')
-    #         loop.create_task(check_subscribe())
-    #     if day == 1 and hour == 16:
-    #         await send_log('Бот -> Планирование задач -> Проверка подписок -> Блокировка доступа')
-    #         loop.create_task(check_subscribe(True))
-    #     await asyncio.sleep(3600)
+    scheduler.start()
 
 
 async def notification():

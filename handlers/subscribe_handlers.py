@@ -135,7 +135,7 @@ async def event_free_checkout(callback: types.CallbackQuery, state: FSMContext, 
     await payment_info(callback.from_user.id, str(new_payment.inserted_id))
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)
 
-    events.update_one({'_id': ObjectId(event_id)}, {'$set': {'users': [callback.from_user.id]}})
+    events.update_one({'_id': ObjectId(event_id)}, {'$push': {'users': callback.from_user.id}})
 
     await callback.message.delete()
 
@@ -171,7 +171,7 @@ async def event_payment_checkout(payment):
     await payment_info(str(user_id), str(new_payment.inserted_id))
     await payment_info(LOG_CHAT, str(new_payment.inserted_id), True)
 
-    events.update_one({'_id': ObjectId(event_id)}, {'$push': {'users': [user_id]}})
+    events.update_one({'_id': ObjectId(event_id)}, {'$push': {'users': user_id}})
 
     await send_log(f"Чек [{str(new_payment.inserted_id)}] -> Платежи")
 

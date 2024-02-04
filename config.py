@@ -12,10 +12,10 @@ TOKEN = getenv('TOKEN')
 MONGO_LOGIN = getenv('MONGO_LOGIN')
 MONGO_PASS = getenv('MONGO_PASS')
 YOOKASSA = getenv('YOOKASSA')
-YOOKASSA_account_id = "301766"
-YOKASSA_secret_key = "live_APTcp0tYEZDrSIi2p5fQDZCkAnZTZrTM4ke_jXmr47o"
+YOOKASSA_account_id = '301255'#"301766"
+YOKASSA_secret_key = 'test_2ZNhGkP1iW9oN8d1S8kaJPbmYRaCcw6KdZu_HPXZ9xQ'#"live_APTcp0tYEZDrSIi2p5fQDZCkAnZTZrTM4ke_jXmr47o"
 
-HOST = getenv('WEBHOOK_HOST')
+HOST = getenv('HOST')
 WEBHOOK_PATH = getenv('WEBHOOK_PATH')
 WEBHOOK_URL = f"{HOST}{WEBHOOK_PATH}"
 PAYMENT_PATH = getenv('PAYMENT_PATH')

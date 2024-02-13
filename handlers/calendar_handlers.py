@@ -39,7 +39,6 @@ async def event_calendar_selected_handler(callback: types.CallbackQuery, state: 
 
 
 async def event_selected(callback: types.CallbackQuery, state: FSMContext, event_id):
-    print(callback.data)
     await Menu.calendar.set()
     event = events.find_one({'_id': ObjectId(event_id)})
     keyboard = InlineKeyboardMarkup()
@@ -77,7 +76,8 @@ async def event_selected(callback: types.CallbackQuery, state: FSMContext, event
         for service, price in zip(event['service_description'], event['service_price']):
             text += f"- {service}: {price}₽\n"
         text += '👇 Присоединяйтесь!'
-    await callback.message.edit_text(text, reply_markup=keyboard)
+    await callback.message.delete()
+    await bot.send_message(callback.from_user.id, text, reply_markup=keyboard)
 
 
 async def archive_selected(callback: types.CallbackQuery, state: FSMContext, archive_id, edit=True):

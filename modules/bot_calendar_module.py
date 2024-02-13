@@ -172,7 +172,7 @@ class EventCalendar:
             await query.message.edit_reply_markup(await self.start_calendar(int(next_date.year), int(next_date.month)))
         # at some point user clicks DAY button, returning date
         if new_data['act'] == "CURRENT":
-            await query.message.edit_reply_markup(await self.start_calendar(int(year), int(month)))
+            await query.message.edit_text('🗓️ Календарь:\n\n🟢 - Вы участвуете в мероприятии\n🟡 - Вы не участвуете в мероприятии\n🟠 - 🗄️ Архив: Вы участвовали\n🔴 - 🗄️ Архив: Вы не участвовали', reply_markup=await self.start_calendar(int(year), int(month)))
         return return_data
 
 

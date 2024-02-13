@@ -19,20 +19,26 @@ tz = timezone('Asia/Irkutsk')
 async def spreader():
     scheduler = AsyncIOScheduler(timezone=tz)
 
-    scheduler.add_job(events_to_archive, 'cron', hour=23)
+    scheduler.add_job(events_to_archive, 'cron', hour=5)
     scheduler.add_job(notification, 'cron', hour=8)
-    scheduler.add_job(check_subscribe, 'cron', day='last', hour=8)
-    scheduler.add_job(check_subscribe, 'cron', day=1, hour=8)
-    scheduler.add_job(check_subscribe, 'cron', day=1, hour=18)
+    scheduler.add_job(spreader_subscribe, 'cron', day='*', hour=8)
+    scheduler.add_job(spreader_subscribe, 'cron', day='*', hour=18)
     scheduler.add_job(check_subscribe, 'cron', day=2, hour=0, args=[True])
     scheduler.start()
+
+
+async def spreader_subscribe():
+    date_now = datetime.now(tz)
+    if date_now.day in [1, 25, 26, 27, 28, 29, 30, 31] and date_now.hour in [8, 18]:
+        await check_subscribe()
+
 
 
 async def notification():
     for event in events.find({'public': True}):
         keyboard = InlineKeyboardMarkup()
-
-        now = datetime(datetime.now(tz).year, datetime.now(tz).month, datetime.now(tz).day, 0, 0, 0)
+        date_now = datetime.now(tz)
+        now = datetime(date_now.year, date_now.month, date_now.day, 0, 0, 0)
         date = datetime(int(event['year']), int(event['month']), int(event['day']), 0, 0, 0)
 
         if date - timedelta(days=7) == now:
@@ -66,7 +72,7 @@ async def notification():
 async def events_to_archive():
     for event in events.find():
         date = datetime(int(event['year']), int(event['month']), int(event['day']), int(event['hour']), int(event['minute']))
-        if date + timedelta(days=event['duration']) < datetime.now(tz) + timedelta(hours=8):
+        if date + timedelta(days=event['duration']) < datetime.now(tz):
             if event['public']:
                 event_to_archive = Archive(
                     name=event['name'],

@@ -17,6 +17,7 @@ async def spreader():
     await events_to_archive()
     scheduler = AsyncIOScheduler(timezone=tz)
     scheduler.add_job(spreader_, 'cron', day='*', hour='*')
+    tasks.append("scheduler.add_job(spreader_, 'cron', day='*', hour='*')")
     scheduler.start()
 
 

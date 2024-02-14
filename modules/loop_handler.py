@@ -19,12 +19,17 @@ tz = timezone('Asia/Irkutsk')
 async def spreader():
     scheduler = AsyncIOScheduler(timezone=tz)
 
-    scheduler.add_job(events_to_archive, 'cron', hour=5)
-    scheduler.add_job(notification, 'cron', hour=8)
+    scheduler.add_job(events_to_archive, 'cron', day='*', hour=5)
+    scheduler.add_job(printer, 'cron', day='*', hour='*', minutes='*')
+    scheduler.add_job(notification, 'cron', day='*', hour=8)
     scheduler.add_job(spreader_subscribe, 'cron', day='*', hour=8)
     scheduler.add_job(spreader_subscribe, 'cron', day='*', hour=18)
     scheduler.add_job(check_subscribe, 'cron', day=2, hour=0, args=[True])
     scheduler.start()
+
+
+async def printer():
+    print("OK")
 
 
 async def spreader_subscribe():

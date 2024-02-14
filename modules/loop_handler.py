@@ -1,9 +1,6 @@
-
 from datetime import datetime, timedelta
 
-
-from config import loop, bot, banned_users, wait_registration, admins, referral_link, CHANNEL, CHAT
-import asyncio
+from config import bot, banned_users, wait_registration, admins, referral_link, CHANNEL, CHAT, tasks
 
 from database.collection import archive, events, users
 from database.models import Archive
@@ -17,25 +14,28 @@ tz = timezone('Asia/Irkutsk')
 
 
 async def spreader():
+    await events_to_archive()
     scheduler = AsyncIOScheduler(timezone=tz)
-
-    scheduler.add_job(events_to_archive, 'cron', day='*', hour=5)
-    scheduler.add_job(printer, 'cron', day='*', hour='*', minute='*')
-    scheduler.add_job(notification, 'cron', day='*', hour=8)
-    scheduler.add_job(spreader_subscribe, 'cron', day='*', hour=8)
-    scheduler.add_job(spreader_subscribe, 'cron', day='*', hour=18)
-    scheduler.add_job(check_subscribe, 'cron', day=2, hour=0, args=[True])
+    scheduler.add_job(spreader_, 'cron', day='*', hour='*')
     scheduler.start()
 
 
-async def printer():
-    print("OK")
-
-
-async def spreader_subscribe():
+async def spreader_():
+    referral_link.clear()
     date_now = datetime.now(tz)
     if date_now.day in [1, 25, 26, 27, 28, 29, 30, 31] and date_now.hour in [8, 18]:
         await check_subscribe()
+        tasks.append(f"checking subscribe at {date_now}")
+    if date_now.hour == 23:
+        tasks.clear()
+        await events_to_archive()
+        tasks.append(f"checking events at {date_now}")
+    if date_now.day == 2 and date_now.hour == 0:
+        await check_subscribe(True)
+        tasks.append(f"checking subscribe and block at {date_now}")
+    if date_now.hour == 8 or date_now.hour == 18:
+        await notification()
+        tasks.append(f"checking notification at {date_now}")
 
 
 

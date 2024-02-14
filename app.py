@@ -1,5 +1,3 @@
-import threading
-
 import uvicorn
 from aiogram.utils.exceptions import TelegramAPIError
 from bson import ObjectId
@@ -9,7 +7,7 @@ from aiogram import Bot, Dispatcher
 
 import handlers
 import modules.loop_handler
-from config import subscribe_amount, banned_users, wait_registration, admins, WEBHOOK_URL, loop
+from config import subscribe_amount, banned_users, wait_registration, admins, WEBHOOK_URL, tasks
 from database.collection import db_config
 from main import dp, bot
 from modules.logger import send_log
@@ -19,7 +17,6 @@ app = FastAPI()
 
 @app.on_event('startup')
 async def on_startup():
-    print(WEBHOOK_URL)
     conf = db_config.find_one({'_id': ObjectId('659c6a3d1e2c9f558337a9b2')})
     subscribe_amount.append(conf['SUBSCRIBE_AMOUNT'][0])
     for user in conf['banned_users']:
@@ -34,9 +31,21 @@ async def on_startup():
             await bot.delete_webhook()
     await bot.set_webhook(WEBHOOK_URL, allowed_updates=['message', 'callback_query'])
     await modules.loop_handler.spreader()
-    # spreader = threading.Thread(target=start_fastapi_server)
-    # spreader.start()
 
+
+@app.on_event('shutdown')
+async def on_shutdown():
+    db_config.update_one({'_id': ObjectId('659c6a3d1e2c9f558337a9b2')}, {
+        '$set': {'banned_users': [user for user in banned_users],
+                 'wait_registration': [user for user in wait_registration],
+                 'admins': [user for user in admins],
+                 'SUBSCRIBE_AMOUNT': subscribe_amount}})
+    await send_log('Бот -> webhook -> Удалить')
+    await bot.delete_webhook()
+    Bot.set_current(dp.bot)
+    Dispatcher.set_current(dp)
+    await dp.storage.close()
+    await dp.storage.wait_closed()
 
 
 @app.post("/webhook")
@@ -47,10 +56,10 @@ async def webhook(request: Request):
         Dispatcher.set_current(dp)
         await dp.process_update(Update(**update))
     except TelegramAPIError as e:
-        print(f"Telegram API error: {e}")
+        tasks.append(f"Telegram API error: {e}")
         return {"status": "error", "message": str(e)}
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        tasks.append(f"Unexpected error: {e}")
         return {"status": "error", "message": str(e)}
     finally:
         return {"status": "ok"}
@@ -70,10 +79,8 @@ async def payments(request: Request):
 
 @app.get("/")
 async def hello(request: Request):
-    return {"status": "ok"}
+    return {"status": tasks}
 
-#async def start_aiogram_bot():
-    #await main.main()
 
 def start_fastapi_server():
     uvicorn.run(app, host="localhost", port=8000)

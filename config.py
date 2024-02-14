@@ -4,7 +4,7 @@ from os import getenv, path
 
 from aiogram import Bot
 from dotenv import load_dotenv
-from aiogram import types, Dispatcher
+from aiogram import Dispatcher
 from aiogram.contrib.fsm_storage.redis import RedisStorage2
 
 load_dotenv()
@@ -12,8 +12,8 @@ TOKEN = getenv('TOKEN')
 MONGO_LOGIN = getenv('MONGO_LOGIN')
 MONGO_PASS = getenv('MONGO_PASS')
 YOOKASSA = getenv('YOOKASSA')
-YOOKASSA_account_id = '301255'#"301766"
-YOKASSA_secret_key = 'test_2ZNhGkP1iW9oN8d1S8kaJPbmYRaCcw6KdZu_HPXZ9xQ'#"live_APTcp0tYEZDrSIi2p5fQDZCkAnZTZrTM4ke_jXmr47o"
+YOOKASSA_account_id = "301766" #'301255'
+YOKASSA_secret_key = "live_APTcp0tYEZDrSIi2p5fQDZCkAnZTZrTM4ke_jXmr47o" #'test_2ZNhGkP1iW9oN8d1S8kaJPbmYRaCcw6KdZu_HPXZ9xQ'
 
 HOST = getenv('HOST')
 WEBHOOK_PATH = getenv('WEBHOOK_PATH')
@@ -37,6 +37,7 @@ banned_users = set()
 wait_registration = set()
 admins = set()
 referral_link = set()
+tasks = []
 
 loop = asyncio.get_event_loop()
 

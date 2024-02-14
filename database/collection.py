@@ -1,22 +1,17 @@
-import bson
-from bson import ObjectId
 from pymongo.mongo_client import MongoClient
 from config import MONGO_LOGIN, MONGO_PASS
 
 uri = f"mongodb+srv://{MONGO_LOGIN}:{MONGO_PASS}@atlascluster.u3h56sm.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(uri)
 
-#db = client.BabrBot
-db = client.BabrTest
+db = client.BabrBot
+# db = client.BabrTest
 db_config = db.config
 users = db.users
 events = db.events
 archive = db.archive
 payments = db.payments
 preusers = db.preusers
-
-#event = Event('2023', '12', '29', 'HMM', ['5475217426'])
-#events.insert_one(event())
 
 
 def find_event(date):

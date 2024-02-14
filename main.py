@@ -808,20 +808,3 @@ async def non_state(message):
         except:
             pass
         await message.delete()
-
-
-async def on_startup():
-    pass
-    # insert code here to run it after start
-
-
-async def on_shutdown(dp):
-    db_config.update_one({'_id': ObjectId('659c6a3d1e2c9f558337a9b2')}, {
-        '$set': {'banned_users': [user for user in banned_users],
-                 'wait_registration': [user for user in wait_registration],
-                 'admins': [user for user in admins],
-                 'SUBSCRIBE_AMOUNT': subscribe_amount}})
-    await send_log('Бот -> webhook -> Удалить')
-    await bot.delete_webhook()
-    await dp.storage.close()
-    await dp.storage.wait_closed()

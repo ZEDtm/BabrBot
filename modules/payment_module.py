@@ -1,11 +1,8 @@
-import asyncio
-
 from yookassa import Configuration, Payment
 import json
 
-import handlers
-from config import loop, YOOKASSA_account_id, YOKASSA_secret_key
-from modules.logger import send_log
+from config import YOOKASSA_account_id, YOKASSA_secret_key
+
 
 
 # payment_method_data = [{'name': "Банковская карта", 'method': "bank_card"},
@@ -24,7 +21,7 @@ async def create_payment(amount, description, payload):
             "currency": "RUB"
         },
         "payment_method_data": {
-            "type": "bank_card"
+            "type": "sberbank"
         },
         "confirmation": {
             "type": "redirect",
@@ -36,7 +33,6 @@ async def create_payment(amount, description, payload):
     })
 
     payment_data = json.loads(payment.json())
-    payment_id = payment_data['id']
     payment_url = (payment_data['confirmation'])['confirmation_url']
 
     return payment_url
@@ -63,7 +59,6 @@ async def create_card_payment(amount, description, payload):
     })
 
     payment_data = json.loads(payment.json())
-    payment_id = payment_data['id']
     payment_url = (payment_data['confirmation'])['confirmation_url']
 
     return payment_url
@@ -90,8 +85,6 @@ async def create_b2b_payment(amount, description, payload):
     })
 
     payment_data = json.loads(payment.json())
-    payment_id = payment_data['id']
-    #loop.create_task(check_payment(payment_id))
     payment_url = (payment_data['confirmation'])['confirmation_url']
 
     return payment_url

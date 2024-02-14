@@ -20,7 +20,7 @@ async def spreader():
     scheduler = AsyncIOScheduler(timezone=tz)
 
     scheduler.add_job(events_to_archive, 'cron', day='*', hour=5)
-    scheduler.add_job(printer, 'cron', day='*', hour='*', minutes='*')
+    scheduler.add_job(printer, 'cron', day='*', hour='*', minute='*')
     scheduler.add_job(notification, 'cron', day='*', hour=8)
     scheduler.add_job(spreader_subscribe, 'cron', day='*', hour=8)
     scheduler.add_job(spreader_subscribe, 'cron', day='*', hour=18)

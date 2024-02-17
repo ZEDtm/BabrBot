@@ -35,7 +35,7 @@ async def start(message: types.Message):
         menu.add(InlineKeyboardButton(text="📢 Сообщение резидентам", callback_data='notify-all-users'))
         menu.add(InlineKeyboardButton(text="💰 Цена подписки", callback_data='subscribe-amount'))
         await Menu.main.set()
-        await message.answer(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
+        await message.answer(f"Здравствуйте, {user['full_name'].split()[1]} {user['full_name'].split()[2]}!", reply_markup=menu)
         await message.delete()
     elif user:
         link_channel = await bot.export_chat_invite_link(CHANNEL)
@@ -57,7 +57,7 @@ async def start(message: types.Message):
         keyboard = InlineKeyboardMarkup()
         keyboard.add(InlineKeyboardButton('👉 Начать 👈', callback_data='start-search'))
 
-        text = ' Здравствуй, я бот бизнес-клуба "БАБР"\n\n Вы еще не зарегистрированы, я попробую найти Вас в своей базе..\n\n\n👇 Нажмите кнопку ниже'
+        text = ' Здравствуй, я виртуальный помощник бизнес-клуба "БАБР"\n\n Вы еще не зарегистрированы, я попробую найти Вас в своей базе..\n\n\n👇 Нажмите кнопку ниже'
         await bot.send_photo(message.from_user.id, caption=text, photo=types.InputFile(f'{DIR}/hello.jpg'), reply_markup=keyboard)
 
         await message.delete()
@@ -87,7 +87,7 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
         menu.add(InlineKeyboardButton(text="📢 Сообщение резидентам", callback_data='notify-all-users'))
         menu.add(InlineKeyboardButton(text="💰 Цена подписки", callback_data='subscribe-amount'))
         await Menu.main.set()
-        await callback.message.edit_text(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
+        await callback.message.edit_text(f"Здравствуйте, {user['full_name'].split()[1]}  {user['full_name'].split()[2]}!", reply_markup=menu)
     elif user:
         link_channel = await bot.export_chat_invite_link(CHANNEL)
         link_chat = await bot.export_chat_invite_link(CHAT)
@@ -103,7 +103,7 @@ async def menu_handler(callback: types.CallbackQuery, state: FSMContext):
                  InlineKeyboardButton(text='💬 Наш чат', url=link_chat))
         await Menu.main.set()
 
-        await callback.message.edit_text(f"Здравствуйте, {user['full_name'].split()[1]}!", reply_markup=menu)
+        await callback.message.edit_text(f"Здравствуйте, {user['full_name'].split()[1]}  {user['full_name'].split()[2]}!", reply_markup=menu)
 
 
 async def registration_admin(message, user_id):

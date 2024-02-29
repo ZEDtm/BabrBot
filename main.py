@@ -72,11 +72,8 @@ async def handle_registration(message: types.Message):
 @dp.callback_query_handler(lambda callback: callback.message.chat.id in banned_users, chat_type=types.ChatType.PRIVATE, state='*')
 async def handle_banned(callback: types.CallbackQuery):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    keyboard.add(types.InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"),
-                 types.InlineKeyboardButton(text='🎫 Оформить на 3 месяца', callback_data=f"user-subscribe%3"),
-                 types.InlineKeyboardButton(text='🎫 Оформить на 6 месяцев', callback_data=f"user-subscribe%6"),
-                 types.InlineKeyboardButton(text='🎫 Оформить на год', callback_data=f"user-subscribe%12"))
-    await callback.message.answer('👇 Вы еще не оплатили подписку..', reply_markup=keyboard)
+    keyboard.add(types.InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"))
+    await callback.message.answer('👇 Вы еще не оплатили подписку..\n\n Долгосрочная подписка: @pawlofff', reply_markup=keyboard)
 
 
 @dp.message_handler(commands='start', chat_type=types.ChatType.PRIVATE, state='*')

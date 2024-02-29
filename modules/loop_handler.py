@@ -78,7 +78,8 @@ async def notification():
 async def events_to_archive():
     for event in events.find():
         date = datetime(int(event['year']), int(event['month']), int(event['day']), int(event['hour']), int(event['minute']))
-        if date + timedelta(days=event['duration']) < datetime.now(tz):
+        date_now = datetime.now()
+        if date + timedelta(days=event['duration']) < date_now:
             if event['public']:
                 event_to_archive = Archive(
                     name=event['name'],
@@ -119,12 +120,10 @@ async def check_subscribe(banned=False):
             else:
                 await send_log(f"Уведомление о неоплаченной подписке -> Пользователь[{user_id}]")
                 keyboard = InlineKeyboardMarkup(row_width=1)
-                keyboard.add(InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"),
-                             InlineKeyboardButton(text='🎫 Оформить на 3 месяца', callback_data=f"user-subscribe%3"),
-                             InlineKeyboardButton(text='🎫 Оформить на 6 месяцев', callback_data=f"user-subscribe%6"),
-                             InlineKeyboardButton(text='🎫 Оформить на год', callback_data=f"user-subscribe%12"))
+                keyboard.add(InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"))
+
                 try:
-                    await bot.send_message(user_id, '😔 Ваша подписка окончена, доступ к нашим ресурсам будет ограничен 1 числа\nПожалуйста, оформите подписку:', reply_markup=keyboard)
+                    await bot.send_message(user_id, 'Уважаемый резидент клуба, к сожалению, мы вынуждены ограничить ваш доступ к ресурсам сообщества с 1-го числа. Пожалуйста, оплатите членский взнос.\n\n Долгосрочная подписка: @pawlofff', reply_markup=keyboard)
                 except:
                     pass
         else:

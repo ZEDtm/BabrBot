@@ -39,7 +39,6 @@ async def spreader_():
         tasks.append(f"checking notification at {date_now}")
 
 
-
 async def notification():
     for event in events.find({'public': True}):
         keyboard = InlineKeyboardMarkup()

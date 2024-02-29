@@ -119,10 +119,11 @@ async def check_subscribe(banned=False):
             else:
                 await send_log(f"Уведомление о неоплаченной подписке -> Пользователь[{user_id}]")
                 keyboard = InlineKeyboardMarkup(row_width=1)
-                keyboard.add(InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"))
+                keyboard.add(InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"),
+                             InlineKeyboardButton(text="Долгосрочная подписка", callback_data=f"long_subscribe"))
 
                 try:
-                    await bot.send_message(user_id, 'Уважаемый резидент клуба, к сожалению, мы вынуждены ограничить ваш доступ к ресурсам сообщества с 1-го числа. Пожалуйста, оплатите членский взнос.\n\n Долгосрочная подписка: @pawlofff', reply_markup=keyboard)
+                    await bot.send_message(user_id, 'Уважаемый резидент клуба, к сожалению, мы вынуждены ограничить ваш доступ к ресурсам сообщества с 1-го числа. Пожалуйста, оплатите членский взнос:', reply_markup=keyboard)
                 except:
                     pass
         else:

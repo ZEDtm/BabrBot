@@ -51,16 +51,14 @@ async def subscribe_payment_receipt(callback: types.CallbackQuery, state: FSMCon
 
 
 #  СТРАРТ
+
+
+
 @dp.message_handler(lambda message: message.from_user.id in banned_users, chat_type=types.ChatType.PRIVATE, state='*')
 async def handle_banned(message: types.Message):
-    #if len(message.text) > 6:
-        #payment_id = message.text.split()
-        #loop.create_task(modules.payment_module.check_payment(payment_id))
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(types.InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"),
-                 types.InlineKeyboardButton(text='🎫 Оформить на 3 месяца', callback_data=f"user-subscribe%3"),
-                 types.InlineKeyboardButton(text='🎫 Оформить на 6 месяцев', callback_data=f"user-subscribe%6"),
-                 types.InlineKeyboardButton(text='🎫 Оформить на год', callback_data=f"user-subscribe%12"))
+                 types.InlineKeyboardButton(text="Долгосрочная подписка", callback_data=f"long_subscribe"))
     await message.answer('👇 Вы еще не оплатили подписку..', reply_markup=keyboard)
 
 
@@ -69,11 +67,15 @@ async def handle_registration(message: types.Message):
     await message.answer('😔 Вашу заявку еще рассматривают, ожидайте')
 
 
+@dp.callback_query_handler(lambda callback: 'long_subscribe' in callback.data, chat_type=types.ChatType.PRIVATE, state='*')
+async def long_subscribe(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.answer('Для оформления долгосрочной подписки обратитесь к менеджеру: @pawlofff')
+
 @dp.callback_query_handler(lambda callback: callback.message.chat.id in banned_users, chat_type=types.ChatType.PRIVATE, state='*')
 async def handle_banned(callback: types.CallbackQuery):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(types.InlineKeyboardButton(text='🎫 Оформить на 1 месяц', callback_data=f"user-subscribe%1"))
-    await callback.message.answer('👇 Вы еще не оплатили подписку..\n\n Долгосрочная подписка: @pawlofff', reply_markup=keyboard)
+    await callback.message.answer('👇 Вы еще не оплатили подписку..\n\n ', reply_markup=keyboard)
 
 
 @dp.message_handler(commands='start', chat_type=types.ChatType.PRIVATE, state='*')
@@ -83,6 +85,7 @@ async def start(message: types.Message):
 @dp.message_handler(commands='start')
 async def start(message: types.Message):
     print(message.chat.id)
+
 
 @dp.callback_query_handler(lambda callback: 'start-search' in callback.data, chat_type=types.ChatType.PRIVATE, state='*')
 async def start_search(callback: types.CallbackQuery, state: FSMContext):
